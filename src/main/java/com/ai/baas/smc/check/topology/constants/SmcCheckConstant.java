@@ -1,6 +1,6 @@
-package com.ai.baas.bmc.topology.core.util;
+package com.ai.baas.smc.check.topology.constants;
 
-public class BmcConstants {
+public class SmcCheckConstant {
 
 	public static final String UNPACKING_BOLT ="unpacking";
 	public static final String DUPLICATE_CHECKING_BOLT = "duplicate_checking";

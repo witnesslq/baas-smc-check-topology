@@ -1,22 +1,22 @@
-package com.ai.baas.bmc.topology.core.util;
+package com.ai.baas.smc.check.topology.exception;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-public class BmcException extends Exception {
+public class SmcCheckException extends Exception {
 	private static final long serialVersionUID = -4985975715070523516L;
 	private String code;
 	
-	public BmcException(String code, String msg){
+	public SmcCheckException(String code, String msg){
 		super(msg);
 		this.code = code;
 	}
 	
-	public BmcException(String code, String msg, Throwable cause){
+	public SmcCheckException(String code, String msg, Throwable cause){
 		super(msg,cause);
 	}
 	
-	public BmcException(String code, Throwable cause){
+	public SmcCheckException(String code, Throwable cause){
 		super(cause);
 		this.code = code;
 	}
