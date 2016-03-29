@@ -23,7 +23,10 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
 		outputFields = StringUtils.splitPreserveAllTokens(aOutputFields, ",");
 	}
 
-	@Override
+	public DuplicateCheckingBolt() {
+    }
+
+    @Override
 	public void prepare(Map stormConf, TopologyContext context) {
 		System.out.println("+++++++++++++++DuplicateCheckingBolt+++++");
 		DuplicateCheckingConfig.getInstance();

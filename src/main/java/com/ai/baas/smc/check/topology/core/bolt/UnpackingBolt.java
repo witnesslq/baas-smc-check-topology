@@ -35,18 +35,12 @@ public class UnpackingBolt extends BaseBasicBolt {
 
     private MappingRule[] mappingRules = new MappingRule[2];
 
-    // private String dbName = "jdbc.bmc";
-    private String[] outputFields;
-
-    public UnpackingBolt(String aOutputFields) {
-        System.out.println("===============UnpackingBolt 00000000000000000====");
-        outputFields = StringUtils.splitPreserveAllTokens(aOutputFields, ",");
-    }
+    private String[] outputFields = new String[] { "data" };
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
-        System.out.println("===============UnpackingBolt.prepare====");
-        JdbcProxy.loadResource(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
+        LOG.info("===============UnpackingBolt.prepare====");
+        JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_INPUT,
                 BaseConstants.JDBC_DEFAULT);
         mappingRules[1] = mappingRules[0];
@@ -57,34 +51,24 @@ public class UnpackingBolt extends BaseBasicBolt {
         String line = "";
         try {
             line = input.getString(0);
-            // System.out.println("=============line=="+line);
             List<Object> values = null;
             String[] inputDatas = StringUtils.splitPreserveAllTokens(line,
                     BaseConstants.RECORD_SPLIT);
             MessageParser messageParser = null;
             for (String inputData : inputDatas) {
-                // System.out.println("-------------"+inputData);
                 messageParser = MessageParser.parseObject(inputData, mappingRules, outputFields);
-                messageParser.getData();
                 values = messageParser.toTupleData();
                 if (CollectionUtils.isNotEmpty(values)) {
                     collector.emit(values);
                 }
-
-                // test
-                // values = new ArrayList<Object>();
-                // values.add(inputData);
-                // collector.emit(values);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("解包失败", e);
         }
-
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        System.out.println("===============UnpackingBolt 3333333333333====");
         declarer.declare(new Fields(outputFields));
     }
 

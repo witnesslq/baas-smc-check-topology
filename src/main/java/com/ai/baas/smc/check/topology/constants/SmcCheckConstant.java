@@ -2,11 +2,10 @@ package com.ai.baas.smc.check.topology.constants;
 
 public class SmcCheckConstant {
 
-	public static final String UNPACKING_BOLT ="unpacking";
-	public static final String DUPLICATE_CHECKING_BOLT = "duplicate_checking";
-	public static final String RULE_ADAPT_BOLT = "rule_adapt";
-	public static final String COST_CALCULATING_BOLT = "cost_calculating";
+    public static final String UNPACKING_BOLT = "unpacking";
 
-	
-	
+    public static final String DATA_VALIDATION_BOLT = "data_validation";
+
+    public static final String BILL_DETAIL_CHECK_BOLT = "bill_detail_checking";
+
 }
