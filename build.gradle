@@ -28,7 +28,7 @@ dependencies{
 //    compile 'com.ai.baas.storm:baas-storm:0.1.2-SNAPSHOT'
     compile 'commons-dbutils:commons-dbutils:1.5'
     
-//    compile 'com.ai.opt.sdk:opt-sdk:1.0-SNAPSHOT'
+//    compile 'com.ai.opt.sdk:opt-sdk:1.0.2-SNAPSHOT'
     
     // 不打包依赖
     provided 'org.apache.storm:storm-core:0.9.6'
