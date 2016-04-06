@@ -36,6 +36,22 @@ public final class SmcCacheConstant {
          */
         public static final String SYS_PARAM_CACHE = "com.ai.baas.smc.cache.sysparam";
 
-        public static final String RULE_MANAGE = "com.ai.baas.smc.cache.rulemanage";
+        public static final String POLICY_CACHE = "com.ai.baas.smc.cache.policy";
+
+        public static final String BILL_STYLE_CACHE = "com.ai.baas.smc.cache.billstyle";
+
+        public static final String ELEMENT_CACHE = "com.ai.baas.smc.cache.element";
+    }
+
+    public static class Dshm {
+        public static class TableName {
+            public static final String STL_IMPORT_LOG = "stl_import_log";
+        }
+
+        public static class OptType {
+            public static final int INSERT = 1;
+
+            public static final int UPDATE = 0;
+        }
     }
 }
