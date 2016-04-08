@@ -4,6 +4,8 @@ public final class SmcCacheConstant {
     private SmcCacheConstant() {
     }
 
+    public static final String CACHE_KEY_SPLIT = ".";
+
     /**
      * 账单项
      */

@@ -51,7 +51,8 @@ public class DataValidationBolt extends BaseBasicBolt {
         LOG.info("数据校验bolt[prepare方法]...");
         super.prepare(stormConf, context);
         if (cacheClient == null) {
-            cacheClient = CacheClientFactory.getCacheClient(SmcCacheConstant.NameSpace.RULE_MANAGE);
+            cacheClient = CacheClientFactory
+                    .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
         }
         /* 初始化hbase */
         HBaseProxy.loadResource(stormConf);
@@ -79,33 +80,32 @@ public class DataValidationBolt extends BaseBasicBolt {
         String policyCode = "";
         String tenantId = data.get(BaseConstants.TENANT_ID);
         // 根据政策编码获取账单格式定义
-        String policyStr = cacheClient.hget(SmcCacheConstant.NameSpace.RULE_MANAGE, tenantId + "."
-                + policyCode);
+        String policyStr = cacheClient.get(tenantId + "." + policyCode);
         if (StringUtil.isBlank(policyStr)) {
-            throw new SystemException("政策编码["+policyCode+"]定义不存在");
+            throw new SystemException("政策编码[" + policyCode + "]定义不存在");
         }
         StlPolicy stlPolicy = JSON.parseObject(policyStr, StlPolicy.class);
         String billStyleSn = stlPolicy.getBillStyleSn();
         /* 获取此账单格式定义下的所有的详单项定义； */
-        String billDetailStyleStr = cacheClient.hget(SmcCacheConstant.NameSpace.RULE_MANAGE,
-                tenantId + "." + billStyleSn + "." + SmcCacheConstant.BILL_DETAIL_ITEM);
+        String billDetailStyleStr = cacheClient.get(tenantId + "." + billStyleSn + "."
+                + SmcCacheConstant.BILL_DETAIL_ITEM);
         if (StringUtil.isBlank(billDetailStyleStr)) {
-            throw new SystemException("账单样式编码["+billStyleSn+"]详单项定义不存在");
+            throw new SystemException("账单样式编码[" + billStyleSn + "]详单项定义不存在");
         }
         List<StlBillDetailStyleItem> stlBillDetailStyleItems = JSON.parseArray(billDetailStyleStr,
                 StlBillDetailStyleItem.class);
         /* 判断本详单数据是否满足详单项的格式定义（是否必填，取值类型）。 */
-        for(int i =0;i<stlBillDetailStyleItems.size();i++){
-            StlBillDetailStyleItem stlBillDetailStyleItem =stlBillDetailStyleItems.get(i);
+        for (int i = 0; i < stlBillDetailStyleItems.size(); i++) {
+            StlBillDetailStyleItem stlBillDetailStyleItem = stlBillDetailStyleItems.get(i);
             Long elementId = stlBillDetailStyleItem.getElementId();
             StringBuilder key = new StringBuilder();
             key.append(stlBillDetailStyleItem.getTenantId()).append(".").append(elementId);
-            String elementStr =cacheClient.hget(SmcCacheConstant.NameSpace.RULE_MANAGE, key.toString());
-            if(StringUtil.isBlank(elementStr)){
-                throw new SystemException("元素ID["+elementId+"]不存在");
+            String elementStr = cacheClient.get(key.toString());
+            if (StringUtil.isBlank(elementStr)) {
+                throw new SystemException("元素ID[" + elementId + "]不存在");
             }
-            StlElement stlElement =JSON.parseObject(elementStr, StlElement.class);
-            
+            StlElement stlElement = JSON.parseObject(elementStr, StlElement.class);
+
         }
         /* 如果不满足则记录原因，沉淀数据库（在对应的详单数据记录后面增加一下校验结果【失败】及失败原因），并发送数据校验异常消息。 */
         /* 如果满足，则沉淀数据库（在对应的详单数据记录后面增加一下校验结果:通过），并发送数据校验通过消息。 */
