@@ -20,11 +20,11 @@ public class SmcCheckGeneralFlow extends BaseFlow {
         builder.setBolt(SmcCheckConstant.UNPACKING_BOLT, new UnpackingBolt(), 1).shuffleGrouping(
                 BaseConstants.KAFKA_SPOUT_NAME);
         /* 数据校验bolt */
-        builder.setBolt(SmcCheckConstant.DATA_VALIDATION_BOLT, new DataValidationBolt(), 1)
-                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
+//        builder.setBolt(SmcCheckConstant.DATA_VALIDATION_BOLT, new DataValidationBolt(), 1)
+//                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
         /* 对账bolt */
-        builder.setBolt(SmcCheckConstant.BILL_DETAIL_CHECK_BOLT, new BillDetailCheckBolt(), 1)
-                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
+//        builder.setBolt(SmcCheckConstant.BILL_DETAIL_CHECK_BOLT, new BillDetailCheckBolt(), 1)
+//                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
     }
 
     public static void main(String[] args) {

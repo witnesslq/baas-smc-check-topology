@@ -20,6 +20,7 @@ import com.ai.baas.storm.jdbc.JdbcProxy;
 import com.ai.baas.storm.message.MappingRule;
 import com.ai.baas.storm.message.MessageParser;
 import com.ai.baas.storm.util.BaseConstants;
+import com.alibaba.fastjson.JSON;
 
 /**
  * 拆包<br>
@@ -41,16 +42,18 @@ public class UnpackingBolt extends BaseBasicBolt {
     public void prepare(Map stormConf, TopologyContext context) {
         LOG.info("===============UnpackingBolt.prepare====");
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
-        mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_INPUT,
+        mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,
                 BaseConstants.JDBC_DEFAULT);
         mappingRules[1] = mappingRules[0];
     }
 
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
+        System.out.println("Tuple = " + JSON.toJSONString(input));
         String line = "";
         try {
             line = input.getString(0);
+            System.out.println("解包bolt接收到消息报文:[" + line + "]");
             List<Object> values = null;
             String[] inputDatas = StringUtils.splitPreserveAllTokens(line,
                     BaseConstants.RECORD_SPLIT);

@@ -16,11 +16,11 @@ import com.ai.baas.storm.message.RecordFmt.RecordFmtKey;
 import com.ai.baas.storm.util.BaseConstants;
 
 /**
- * 单条数据解析类 将字符串数据解析成Map格式
+ * 单条数据解析类 将字符串数据解析成Map格式<br>
+ * Date: 2016年4月9日 <br>
+ * Copyright (c) 2016 asiainfo.com <br>
  * 
- * @author majun
- * @since 2016.3.21
- * 
+ * @author mayt
  */
 public class SmcMessageParser {
     private static Logger logger = LoggerFactory.getLogger(SmcMessageParser.class);
@@ -39,9 +39,8 @@ public class SmcMessageParser {
 
     static {
         headerKeys = new String[] { BaseConstants.TENANT_ID, BaseConstants.SERVICE_ID,
-                BaseConstants.SOURCE, BaseConstants.BATCH_SERIAL_NUMBER,
-                BaseConstants.SERIAL_NUMBER, BaseConstants.ARRIVAL_TIME,
-                BaseConstants.ACCOUNT_PERIOD };
+                BaseConstants.SOURCE, SmcCheckConstant.FmtFeildName.BATCH_NO,
+                SmcCheckConstant.FmtFeildName.TOTAL_RECORD };
     }
 
     private SmcMessageParser(String original, MappingRule[] mappingRules, String[] outputKeys) {
@@ -50,7 +49,7 @@ public class SmcMessageParser {
         data.put(SmcCheckConstant.FmtFeildName.BATCH_NO, inputParams[0]);
         data.put(SmcCheckConstant.FmtFeildName.TOTAL_RECORD, inputParams[1]);
         for (int i = 0; i < headerKeys.length; i++) {
-            data.put(headerKeys[i], inputParams[i+2]);
+            data.put(headerKeys[i], inputParams[i]);
         }
         int dataBeginPosi = headerKeys.length;
         int len = inputParams.length - dataBeginPosi;

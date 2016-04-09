@@ -12,6 +12,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * 
  * Date: 2016年3月24日 <br>
@@ -21,7 +22,8 @@ import org.slf4j.LoggerFactory;
  */
 public class TestKafkaPruducer {
     private static Logger LOG = LoggerFactory.getLogger(TestKafkaPruducer.class);
-    private String encoding = "UTF-8";
+
+    private String encoding = "gbk";
 
     public final static String FIELD_SPLIT = new String(new char[] { (char) 1 });
 
@@ -38,13 +40,17 @@ public class TestKafkaPruducer {
             in = new FileInputStream(file);
             reader = new BufferedReader(new InputStreamReader(in, Charsets.toCharset(encoding)));
             String sLine = reader.readLine();
+            String batchNo = sLine.split(",")[1];
+            String totalNum = sLine.split(",")[3];
+            sLine = reader.readLine();
             while (sLine != null) {
                 sLine = reader.readLine();
-                if(sLine==null){
+                if (sLine == null) {
                     break;
                 }
-                String message = assembleMessage(sLine);
-                LOG.info("message----"+message);
+                String message = "MVNE" + "MSG" + "MSG" + batchNo + FIELD_SPLIT + totalNum
+                        + FIELD_SPLIT + assembleMessage(sLine);
+                LOG.info("message----" + message);
                 ProducerProxy.getInstance().sendMessage(message);
             }
         } catch (Exception e) {
@@ -56,16 +62,16 @@ public class TestKafkaPruducer {
 
     private String assembleMessage(String line) {
         String[] fieldNames = null;
-            StringBuilder record = new StringBuilder();
-            fieldNames = StringUtils.splitPreserveAllTokens(line, ";");
-            for (String fieldName : fieldNames) {
-                record.append(fieldName).append(FIELD_SPLIT);
-            }
+        StringBuilder record = new StringBuilder();
+        fieldNames = StringUtils.splitPreserveAllTokens(line, ",");
+        for (String fieldName : fieldNames) {
+            record.append(fieldName).append(FIELD_SPLIT);
+        }
         return record.substring(0, record.length() - 1).toString();
     }
 
     public static void main(String[] args) {
-        String path = "E:\\data.txt";
+        String path = "E:\\BW_201603_MVNE-MSG-BW_详单_1.csv";
         TestKafkaPruducer simulator = new TestKafkaPruducer();
         simulator.send(path);
     }
