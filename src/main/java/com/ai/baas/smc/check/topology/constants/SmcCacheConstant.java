@@ -50,6 +50,16 @@ public final class SmcCacheConstant {
             public static final String STL_IMPORT_LOG = "stl_import_log";
         }
 
+        public static class FieldName {
+
+            public static final String TENANT_ID = "tenant_id";
+
+            public static final String BATCH_NO = "batch_no";
+
+            public static final Object BILL_TIME_SN = "bill_time_sn";
+
+        }
+
         public static class OptType {
             public static final int INSERT = 1;
 

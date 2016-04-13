@@ -13,6 +13,9 @@ public class SmcCheckConstant {
 
         public static final String TOTAL_RECORD = "total_record";
 
-        public static final String BILL_DETAIL_CHECK_BOLT = "bill_detail_checking";
+        public static final String TENANT_ID = "tenant_id";
+
+        public static final Object SUBS_ID = null;
+
     }
 }
