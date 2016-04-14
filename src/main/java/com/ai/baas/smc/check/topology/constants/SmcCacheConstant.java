@@ -56,7 +56,9 @@ public final class SmcCacheConstant {
 
             public static final String BATCH_NO = "batch_no";
 
-            public static final Object BILL_TIME_SN = "bill_time_sn";
+            public static final String BILL_TIME_SN = "bill_time_sn";
+
+            public static final String OBJECT_ID = "object_id";
 
         }
 

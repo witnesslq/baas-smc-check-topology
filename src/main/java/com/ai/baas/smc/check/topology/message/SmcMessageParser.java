@@ -10,7 +10,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ai.baas.smc.check.topology.constants.SmcCheckConstant;
+import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.storm.message.MappingRule;
 import com.ai.baas.storm.message.RecordFmt.RecordFmtKey;
 import com.ai.baas.storm.util.BaseConstants;
@@ -39,15 +39,15 @@ public class SmcMessageParser {
 
     static {
         headerKeys = new String[] { BaseConstants.TENANT_ID, BaseConstants.SERVICE_ID,
-                BaseConstants.SOURCE, SmcCheckConstant.FmtFeildName.BATCH_NO,
-                SmcCheckConstant.FmtFeildName.TOTAL_RECORD };
+                BaseConstants.SOURCE, SmcConstant.FmtFeildName.BATCH_NO,
+                SmcConstant.FmtFeildName.TOTAL_RECORD };
     }
 
     private SmcMessageParser(String original, MappingRule[] mappingRules, String[] outputKeys) {
         String[] inputParams = StringUtils.splitPreserveAllTokens(original,
                 BaseConstants.FIELD_SPLIT);
-        data.put(SmcCheckConstant.FmtFeildName.BATCH_NO, inputParams[0]);
-        data.put(SmcCheckConstant.FmtFeildName.TOTAL_RECORD, inputParams[1]);
+        data.put(SmcConstant.FmtFeildName.BATCH_NO, inputParams[0]);
+        data.put(SmcConstant.FmtFeildName.TOTAL_RECORD, inputParams[1]);
         for (int i = 0; i < headerKeys.length; i++) {
             data.put(headerKeys[i], inputParams[i]);
         }
