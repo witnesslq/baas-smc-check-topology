@@ -216,10 +216,12 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             if (StringUtil.isBlank(feeItemIdSys) || StringUtil.isBlank(itemFeeSys)
                     || !feeItemId3pl.equals(feeItemIdSys) || !itemFee3pl.equals(itemFeeSys)) {
                 String diffFee = itemFee3pl;
+                String checkStateDesc = "无匹配记录";
                 if (!StringUtil.isBlank(feeItemIdSys) && !StringUtil.isBlank(itemFeeSys)
                         && feeItemId3pl.equals(feeItemIdSys)) {
                     diffFee = String.valueOf(Long.parseLong(itemFee3pl)
                             - Long.parseLong(itemFeeSys));
+                    checkStateDesc = "金额不一致";
                 }
                 // 查询第三方详单
                 // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
@@ -259,6 +261,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                         SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes(),
                         SmcConstant.StlBillDetailDiffData.CheckState.DIFF.getBytes());
+                put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                        SmcHbaseConstant.ColumnName.CHECK_STATE_DESC.getBytes(),
+                        checkStateDesc.getBytes());
                 Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
                         TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                                 + yyyyMm));
@@ -324,6 +329,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                             SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes(),
                             SmcConstant.StlBillDetailDiffData.CheckState.DIFF.getBytes());
+                    put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                            SmcHbaseConstant.ColumnName.CHECK_STATE_DESC.getBytes(),
+                            "记录缺失".getBytes());
                     Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
                             TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                                     + yyyyMm));
@@ -332,11 +340,25 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             }
             // b) 修改账单数据表（第三方账单和本系统结算算费结果帐单）中的对账结果（差异金额为0则沉淀状态为账单一致，否则沉淀状态为有差异）。
             // 7， 如果对账结果为有差异，则调用对账错误详单文件生成方法，生成错误详单文件，并向账详单处理结果文件清单表新增记录。
-            
+            // 生成文件
+            createFile(billData3pl, billDataSys);
             // 8， 完成
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+    }
+
+    private void createFile(StlBillData billData3pl, StlBillData billDataSys) {
+        // 1. 根据租户ID、账期月份、账单ID查询账单表及账单科目汇总表，获取账单信息；
+        // 2. 根据账单模板生成账单excel文件(文件名：ERR_租户ID_结算方ID 政策编码_账期_账单.xlsx)；
+
+        // 3. 生成详单文件（文件名：ERR_租户ID_结算方ID 政策编码_账期_详单_序号.cvs)）
+        // a) 第一行为批次号（账单ID）＋差异详单总记录数
+        // b)
+        // 第三行开始为差异详单明细，数据来源根据租户ID、账单ID查询详单差异数据表，获取差异详单清单，再根据差异详单的KEY从详单数据表中获取具体详单信息，格式及次序根据详单项定义表中的详单项。
+        // c) 单个详单文件记录长度为5万条记录，如果记录数超出则拆多个文件方式处理
+        // 4. 把账单文件和详单文件文件压缩为一个文件（文件名：ERR_租户ID_结算方ID _政策编码_账期_YYYYMMDDHHMISS.zip）
 
     }
 

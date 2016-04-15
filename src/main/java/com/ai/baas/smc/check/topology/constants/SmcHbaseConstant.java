@@ -32,6 +32,8 @@ public final class SmcHbaseConstant {
 
         public static final String STL_ORDER_DATA_KEY = "stl_order_data_key";
 
+        public static final String CHECK_STATE_DESC = "check_state_desc";
+
     }
 
     /**
