@@ -1,5 +1,10 @@
 package com.ai.baas.smc.check.topology.core.bolt;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -16,6 +21,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
@@ -28,14 +40,19 @@ import com.ai.baas.dshm.client.impl.CacheBLMapper;
 import com.ai.baas.dshm.client.impl.DshmClient;
 import com.ai.baas.dshm.client.interfaces.IDshmClient;
 import com.ai.baas.smc.check.topology.DAO.StlBillDataDAO;
+import com.ai.baas.smc.check.topology.DAO.StlBillItemDataDAO;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.Dshm.FieldName;
+import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.ParamCode;
+import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.TypeCode;
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
 import com.ai.baas.smc.check.topology.vo.StlBillData;
+import com.ai.baas.smc.check.topology.vo.StlBillItemData;
 import com.ai.baas.smc.check.topology.vo.StlBillStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlPolicy;
+import com.ai.baas.smc.check.topology.vo.StlSysParam;
 import com.ai.baas.storm.jdbc.JdbcProxy;
 import com.ai.baas.storm.message.MappingRule;
 import com.ai.baas.storm.message.MessageParser;
@@ -48,6 +65,7 @@ import com.ai.opt.sdk.util.CollectionUtil;
 import com.ai.opt.sdk.util.StringUtil;
 import com.ai.paas.ipaas.mcs.interfaces.ICacheClient;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 
 /**
  * 对账<br>
@@ -57,6 +75,7 @@ import com.alibaba.fastjson.JSON;
  * @author mayt
  */
 public class BillDetailCheckBolt extends BaseBasicBolt {
+    private static final Logger LOG = LoggerFactory.getLogger(BillDetailCheckBolt.class);
 
     private static final long serialVersionUID = -3214008757998306486L;
 
@@ -68,13 +87,17 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     private ICacheClient countCacheClient;
 
+    private ICacheClient sysParamCacheClient;
+
+    private IDshmClient dshmClient;
+
     private String[] outputFields = new String[] { "data" };
 
     private MappingRule[] mappingRules = new MappingRule[2];
 
     private StlBillDataDAO stlBillDataDAO;
 
-    private IDshmClient dshmClient;
+    private StlBillItemDataDAO stlBillItemDataDAO;
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
@@ -94,7 +117,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             countCacheClient = CacheClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.CHECK_COUNT_CACHE);
         }
-
+        if (sysParamCacheClient == null) {
+            sysParamCacheClient = CacheClientFactory
+                    .getCacheClient(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE);
+        }
+        if (dshmClient == null) {
+            dshmClient = new DshmClient();
+        }
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,
                 BaseConstants.JDBC_DEFAULT);
         mappingRules[1] = mappingRules[0];
@@ -103,8 +132,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         if (stlBillDataDAO == null) {
             stlBillDataDAO = new StlBillDataDAO();
         }
-        if (dshmClient == null) {
-            dshmClient = new DshmClient();
+        if (stlBillItemDataDAO == null) {
+            stlBillItemDataDAO = new StlBillItemDataDAO();
         }
 
     }
@@ -341,7 +370,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // b) 修改账单数据表（第三方账单和本系统结算算费结果帐单）中的对账结果（差异金额为0则沉淀状态为账单一致，否则沉淀状态为有差异）。
             // 7， 如果对账结果为有差异，则调用对账错误详单文件生成方法，生成错误详单文件，并向账详单处理结果文件清单表新增记录。
             // 生成文件
-            createFile(billData3pl, billDataSys);
+            createFile(billData3pl, billDataSys, objectId);
             // 8， 完成
         } catch (Exception e) {
             e.printStackTrace();
@@ -349,17 +378,246 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     }
 
-    private void createFile(StlBillData billData3pl, StlBillData billDataSys) {
+    private void createFile(StlBillData billData3pl, StlBillData billDataSys, String objectId) {
+        String tenantId = billData3pl.getTenantId();
+        Long billId3pl = billData3pl.getBillId();
+        Long billIdSys = billDataSys.getBillId();
+        String billTimeSn = billData3pl.getBillTimeSn();
+        String yyyyMm = StringUtil.restrictLength(billTimeSn, 6);
         // 1. 根据租户ID、账期月份、账单ID查询账单表及账单科目汇总表，获取账单信息；
-        // 2. 根据账单模板生成账单excel文件(文件名：ERR_租户ID_结算方ID 政策编码_账期_账单.xlsx)；
+        StlBillItemData stlBillItemDataQuery = new StlBillItemData();
+        stlBillItemDataQuery.setTenantId(billData3pl.getTenantId());
+        stlBillItemDataQuery.setBillId(billData3pl.getBillId());
+        List<StlBillItemData> stlBillItemDatas;
+        Workbook wb = null;
+        try {
+            try {
+                stlBillItemDatas = stlBillItemDataDAO.query(
+                        JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT),
+                        StringUtil.restrictLength(billData3pl.getBillTimeSn(), 6),
+                        stlBillItemDataQuery);
+            } catch (Exception e) {
+                throw new SystemException(e);
+            }
 
-        // 3. 生成详单文件（文件名：ERR_租户ID_结算方ID 政策编码_账期_详单_序号.cvs)）
-        // a) 第一行为批次号（账单ID）＋差异详单总记录数
-        // b)
-        // 第三行开始为差异详单明细，数据来源根据租户ID、账单ID查询详单差异数据表，获取差异详单清单，再根据差异详单的KEY从详单数据表中获取具体详单信息，格式及次序根据详单项定义表中的详单项。
-        // c) 单个详单文件记录长度为5万条记录，如果记录数超出则拆多个文件方式处理
-        // 4. 把账单文件和详单文件文件压缩为一个文件（文件名：ERR_租户ID_结算方ID _政策编码_账期_YYYYMMDDHHMISS.zip）
+            // 2. 根据账单模板生成账单excel文件(文件名：ERR_租户ID_结算方ID 政策编码_账期_账单.xlsx)；
 
+            wb = new XSSFWorkbook();
+            XSSFSheet sheet0 = (XSSFSheet) wb.createSheet("账单");
+            XSSFRow row0 = sheet0.createRow(0);// 第一行
+            XSSFCell cell = row0.createCell(0);
+            cell.setCellValue("结算方");
+            cell = row0.createCell(1);
+            cell.setCellValue(billData3pl.getStlElementSn());
+            cell = row0.createCell(2);
+            cell.setCellValue("批次号");
+            cell = row0.createCell(3);
+            cell.setCellValue(billData3pl.getBatchNo());
+
+            XSSFRow row1 = sheet0.createRow(1);// 第二行
+            cell = row1.createCell(0);
+            cell.setCellValue("政策编码");
+            cell = row1.createCell(1);
+            cell.setCellValue(billData3pl.getPolicyCode());
+            cell = row1.createCell(2);
+            cell.setCellValue("账期");
+            cell = row1.createCell(3);
+            cell.setCellValue(billData3pl.getBillTimeSn());
+
+            XSSFRow row2 = sheet0.createRow(2);// 第三行
+            cell = row2.createCell(0);
+            cell.setCellValue("开始时间");
+            cell = row2.createCell(1);
+            cell.setCellValue(billData3pl.getBillStartTime());
+            cell = row2.createCell(2);
+            cell.setCellValue("结束时间");
+            cell = row2.createCell(3);
+            cell.setCellValue(billData3pl.getBillEndTime());
+
+            XSSFRow row3 = sheet0.createRow(3);// 第四行
+            cell = row3.createCell(0);
+            cell.setCellValue("结算金额(元)");
+            cell = row3.createCell(1);
+            cell.setCellValue(billData3pl.getOrigFee());
+            cell = row3.createCell(2);
+            cell.setCellValue("差异金额(元)");
+            cell = row3.createCell(3);
+            cell.setCellValue(billData3pl.getDiffFee());
+
+            XSSFRow row5 = sheet0.createRow(5);// 第六行
+            cell = row5.createCell(0);
+            cell.setCellValue("科目ID");
+            cell = row5.createCell(1);
+            cell.setCellValue("科目名称");
+            cell = row5.createCell(2);
+            cell.setCellValue("总金额(元)");
+            cell = row5.createCell(3);
+            cell.setCellValue("差异金额(元)");
+
+            int i = 6;
+            for (StlBillItemData stlBillItemData : stlBillItemDatas) {
+                XSSFRow rowTmp = sheet0.createRow(i);
+                cell = rowTmp.createCell(0);
+                cell.setCellValue(stlBillItemData.getFeeItemId());
+                cell = rowTmp.createCell(1);
+                cell.setCellValue(getSysParamDesc(stlBillItemData.getTenantId(),
+                        TypeCode.STL_POLICY_ITEM_PLAN, ParamCode.FEE_ITEM,
+                        stlBillItemData.getFeeItemId()));
+                cell = rowTmp.createCell(2);
+                cell.setCellValue(stlBillItemData.getTotalFee());
+                cell = rowTmp.createCell(3);
+                cell.setCellValue(stlBillItemData.getDiffFee());
+            }
+
+            String excelFileName = "ERR_" + billData3pl.getTenantId() + "_"
+                    + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode() + "_"
+                    + billData3pl.getBillTimeSn() + "_BILL.xlsx";
+            String tmpPath = System.getProperty("user.dir") + "/tmp/";
+
+            File file = new File(tmpPath);
+            if (!file.exists()) {
+                file.mkdirs();
+            }
+            FileOutputStream fileOut = null;
+            fileOut = new FileOutputStream(tmpPath + excelFileName);
+            wb.write(fileOut);
+            // 3. 生成详单文件（文件名：ERR_租户ID_结算方ID 政策编码_账期_详单_序号.cvs)）
+
+            // 取差异详单
+            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
+            // 第三方差异详单
+            String rowKey = new StringBuilder().append(tenantId)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billId3pl)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    .append(SmcConstant.StlBillData.BillFrom.IMPORT)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
+
+            RowFilter rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
+                    rowKey.getBytes()));
+            Scan scan = new Scan();
+            scan.setFilter(rowFilter);
+
+            Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
+                    TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
+                            + yyyyMm));
+            ResultScanner resultScanner3pl = tableBillDetailDiffData.getScanner(scan);
+
+            // 本系统差异详单
+            rowKey = new StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    .append(SmcConstant.StlBillData.BillFrom.SYS)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
+
+            rowFilter = new RowFilter(CompareOp.EQUAL,
+                    new BinaryPrefixComparator(rowKey.getBytes()));
+            scan = new Scan();
+            scan.setFilter(rowFilter);
+
+            ResultScanner resultScannerSys = tableBillDetailDiffData.getScanner(scan);
+
+            int sort = 0;
+            boolean has3pl = true;
+            boolean hasSys = true;
+            int count = 0;// 当前文件条数
+            while (true) {
+                Result rt;
+                if (has3pl) {
+                    rt = resultScanner3pl.next();
+                    if (rt == null) {
+                        has3pl = false;
+                        rt = resultScannerSys.next();
+                    }
+                } else {
+                    rt = resultScannerSys.next();
+                }
+                if (rt == null) {
+                    break;
+                }
+                NavigableMap<byte[], byte[]> map = rt
+                        .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
+
+                i++;
+                String cvsFileName = "ERR_" + billData3pl.getTenantId() + "_"
+                        + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode() + "_"
+                        + billData3pl.getBillTimeSn() + "_BILL_DETAIL_" + sort + ".cvs";
+
+                File csvFile = null;
+                BufferedWriter writer = null;
+                csvFile = new File(tmpPath + cvsFileName);
+                File parent = csvFile.getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                csvFile.createNewFile();
+                // GB2312使正确读取分隔符","
+                writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile),
+                        "GB2312"), 1024);
+                // 写入文件头部
+                writer.write("a,b");
+                writer.newLine();
+                writer.write(i + "a," + i + "b");
+                writer.flush();
+                writer.close();
+            }
+
+            // a) 第一行为批次号（账单ID）＋差异详单总记录数
+            // b)
+            // 第三行开始为差异详单明细，数据来源根据租户ID、账单ID查询详单差异数据表，获取差异详单清单，
+            // 再根据差异详单的KEY从详单数据表中获取具体详单信息，格式及次序根据详单项定义表中的详单项。
+            // c) 单个详单文件记录长度为5万条记录，如果记录数超出则拆多个文件方式处理
+            // 4. 把账单文件和详单文件文件压缩为一个文件（文件名：ERR_租户ID_结算方ID _政策编码_账期_YYYYMMDDHHMISS.zip）
+        } catch (IOException e) {
+            throw new SystemException(e);
+        } finally {
+            try {
+                wb.close();
+            } catch (IOException e) {
+                LOG.error("WorkBook关闭失败", e);
+            }
+        }
+    }
+
+    List<StlSysParam> getSysParams(String tenantId, String typeCode, String paramCode) {
+        ICacheClient cacheClient = CacheClientFactory
+                .getCacheClient(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE);
+        StringBuilder key = new StringBuilder();
+        key.append(tenantId);
+        key.append(".");
+        key.append(typeCode);
+        key.append(".");
+        key.append(paramCode);
+        String data = cacheClient.get(key.toString());
+        if (StringUtil.isBlank(data)) {
+            return null;
+        }
+        return JSONArray.parseArray(data, StlSysParam.class);
+    }
+
+    StlSysParam getSysParam(String tenantId, String typeCode, String paramCode, String columnValue) {
+        ICacheClient cacheClient = CacheClientFactory
+                .getCacheClient(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE);
+        StringBuilder key = new StringBuilder();
+        key.append(tenantId);
+        key.append(".");
+        key.append(typeCode);
+        key.append(".");
+        key.append(paramCode);
+        key.append(".");
+        key.append(columnValue);
+        String data = cacheClient.get(key.toString());
+        if (StringUtil.isBlank(data)) {
+            return null;
+        }
+        return JSONArray.parseObject(data, StlSysParam.class);
+    }
+
+    String getSysParamDesc(String tenantId, String typeCode, String paramCode, String columnValue) {
+        StlSysParam sysParam = getSysParam(tenantId, typeCode, paramCode, columnValue);
+        return sysParam == null ? "" : sysParam.getColumnDesc();
     }
 
     @Override

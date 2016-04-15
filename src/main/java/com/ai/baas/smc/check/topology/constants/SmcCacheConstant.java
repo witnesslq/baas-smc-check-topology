@@ -17,12 +17,16 @@ public final class SmcCacheConstant {
     public static final String BILL_DETAIL_ITEM = "bill.detail.item";
 
     public static final class TypeCode {
+        public static final String STL_POLICY_ITEM_PLAN = "STL_POLICY_ITEM_PLAN";
+
         private TypeCode() {
         }
 
     }
 
     public static final class ParamCode {
+        public static final String FEE_ITEM = "FEE_ITEM";
+
         private ParamCode() {
         }
 
