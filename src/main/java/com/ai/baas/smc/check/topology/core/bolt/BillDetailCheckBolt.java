@@ -60,9 +60,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     private static final long serialVersionUID = -3214008757998306486L;
 
-    ICacheClient policyCacheClient;
+    private ICacheClient policyCacheClient;
 
     private ICacheClient billStyleCacheClient;
+
+    private ICacheClient calParamCacheClient;
+
+    private ICacheClient countCacheClient;
 
     private String[] outputFields = new String[] { "data" };
 
@@ -70,9 +74,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     private StlBillDataDAO stlBillDataDAO;
 
-    IDshmClient dshmClient;
-
-    ICacheClient calParamCacheClient;
+    private IDshmClient dshmClient;
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
@@ -85,6 +87,14 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             billStyleCacheClient = CacheClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
         }
+        if (calParamCacheClient == null) {
+            calParamCacheClient = CacheFactoryUtil.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
+        }
+        if (countCacheClient == null) {
+            countCacheClient = CacheClientFactory
+                    .getCacheClient(SmcCacheConstant.NameSpace.CHECK_COUNT_CACHE);
+        }
+
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,
                 BaseConstants.JDBC_DEFAULT);
         mappingRules[1] = mappingRules[0];
@@ -96,9 +106,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         if (dshmClient == null) {
             dshmClient = new DshmClient();
         }
-        if (calParamCacheClient == null) {
-            calParamCacheClient = CacheFactoryUtil.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
-        }
+
     }
 
     @Override
@@ -111,6 +119,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             Map<String, String> data = messageParser.getData();
             String tenantId = data.get(SmcConstant.FmtFeildName.TENANT_ID);
             String batchNo = data.get(SmcConstant.FmtFeildName.BATCH_NO);
+            String totalRecord = data.get(SmcConstant.FmtFeildName.TOTAL_RECORD);
             String orderId = data.get(SmcConstant.FmtFeildName.ORDER_ID);
             String feeItemId3pl = data.get(SmcConstant.FmtFeildName.FEE_ITEM_ID);
             String itemFee3pl = data.get(SmcConstant.FmtFeildName.TOTAL_FEE);
@@ -185,9 +194,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     rowKey.getBytes()));
             Scan scan = new Scan();
             scan.setFilter(rowFilter);
-            Table table = HBaseProxy.getConnection().getTable(
+            Table tableBillDetailData = HBaseProxy.getConnection().getTable(
                     TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DATA_ + yyyyMm));
-            ResultScanner resultScanner = table.getScanner(scan);
+            ResultScanner resultScanner = tableBillDetailData.getScanner(scan);
             Result result = resultScanner.next();
 
             String feeItemIdSys = null;
@@ -225,7 +234,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         rowKey.getBytes()));
                 scan = new Scan();
                 scan.setFilter(rowFilter);
-                resultScanner = table.getScanner(scan);
+                resultScanner = tableBillDetailData.getScanner(scan);
                 result = resultScanner.next();
                 if (result == null) {
                     throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION,
@@ -234,9 +243,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 // 写入差异表
                 NavigableMap<byte[], byte[]> map = result
                         .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
-                String billDetailId = new String(map.get(SmcHbaseConstant.ColumnName.BILL_DETAIL_ID
+                rowKey = new String(map.get(SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY
                         .getBytes()));
-                rowKey = rowKey + billDetailId;
                 Put put = new Put(rowKey.getBytes());
                 while (true) {
                     Entry<byte[], byte[]> entry = map.pollFirstEntry();
@@ -251,13 +259,80 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                         SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes(),
                         SmcConstant.StlBillDetailDiffData.CheckState.DIFF.getBytes());
-                table.put(put);
+                Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
+                        TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
+                                + yyyyMm));
+                tableBillDetailDiffData.put(put);
             }
-            // 6， 本账单对账次数加1（redis），如果对账次数＝第三方账单详单记录数，则说明第三方详单都已对账完成：
+            // 6， 本账单对账次数加1（redis），
+            String countKey = "billdata_" + tenantId + "_" + batchNo + "_records";
+            Long countRecord = countCacheClient.incr(countKey);
+            // 如果对账次数＝第三方账单详单记录数，则说明第三方详单都已对账完成：
+            if (Long.parseLong(totalRecord) != countRecord.longValue()) {
+                return;
+            }
             // a) 查询本系统结算算费结果详单，查询本系统存在记录，而第三方详单不存在的记录，把
             // 些记录插入差异详单表（stl_bill_detail_diff_data_yyyymm）
+            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
+            key = new StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    .append(SmcConstant.StlBillData.BillFrom.SYS)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT);
+            rowFilter = new RowFilter(CompareOp.EQUAL,
+                    new BinaryPrefixComparator(rowKey.getBytes()));
+            scan = new Scan();
+            scan.setFilter(rowFilter);
+            resultScanner = tableBillDetailData.getScanner(scan);
+            for (Result resultTmp : resultScanner) {
+                NavigableMap<byte[], byte[]> map = resultTmp
+                        .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
+                String orderIdTmp = new String(map.get(SmcHbaseConstant.ColumnName.ORDER_ID
+                        .getBytes()));
+                // 查询第三方详单
+                rowKey = new StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
+                        .append(billId3pl).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
+                        .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
+                        .append(SmcHbaseConstant.ROWKEY_SPLIT)
+                        .append(SmcConstant.StlBillData.BillFrom.IMPORT)
+                        .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderIdTmp)
+                        .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
+                rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
+                        rowKey.getBytes()));
+                scan = new Scan();
+                scan.setFilter(rowFilter);
+                ResultScanner resultScannerTmp = tableBillDetailData.getScanner(scan);
+                Result result3pl = resultScannerTmp.next();
+                if (result3pl == null) {
+                    // 插入差异表
+                    String itemFeeTmp = new String(map.get(SmcHbaseConstant.ColumnName.ITEM_FEE
+                            .getBytes()));
+                    rowKey = new String(map.get(SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY
+                            .getBytes()));
+                    Put put = new Put(rowKey.getBytes());
+                    while (true) {
+                        Entry<byte[], byte[]> entry = map.pollFirstEntry();
+                        if (entry == null) {
+                            break;
+                        }
+                        put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                                entry.getKey(), entry.getValue());
+                    }
+                    put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                            SmcHbaseConstant.ColumnName.DIFF_FEE.getBytes(), itemFeeTmp.getBytes());
+                    put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                            SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes(),
+                            SmcConstant.StlBillDetailDiffData.CheckState.DIFF.getBytes());
+                    Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
+                            TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
+                                    + yyyyMm));
+                    tableBillDetailDiffData.put(put);
+                }
+            }
             // b) 修改账单数据表（第三方账单和本系统结算算费结果帐单）中的对账结果（差异金额为0则沉淀状态为账单一致，否则沉淀状态为有差异）。
             // 7， 如果对账结果为有差异，则调用对账错误详单文件生成方法，生成错误详单文件，并向账详单处理结果文件清单表新增记录。
+            
             // 8， 完成
         } catch (Exception e) {
             e.printStackTrace();

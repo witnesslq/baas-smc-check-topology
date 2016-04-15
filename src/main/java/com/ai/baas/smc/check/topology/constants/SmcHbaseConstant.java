@@ -28,6 +28,10 @@ public final class SmcHbaseConstant {
 
         public static final String CHECK_STATE = "check_state";
 
+        public static final String ORDER_ID = "order_id";
+
+        public static final String STL_ORDER_DATA_KEY = "stl_order_data_key";
+
     }
 
     /**

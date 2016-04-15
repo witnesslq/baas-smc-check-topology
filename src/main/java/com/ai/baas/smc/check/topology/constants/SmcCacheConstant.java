@@ -43,6 +43,11 @@ public final class SmcCacheConstant {
         public static final String BILL_STYLE_CACHE = "com.ai.baas.smc.cache.billstyle";
 
         public static final String ELEMENT_CACHE = "com.ai.baas.smc.cache.element";
+
+        /**
+         * redis计数
+         */
+        public static final String CHECK_COUNT_CACHE = "com.ai.baas.smc.cache.check.count";
     }
 
     public static class Dshm {
