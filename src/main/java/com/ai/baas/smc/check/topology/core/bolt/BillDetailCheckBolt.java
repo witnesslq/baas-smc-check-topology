@@ -162,12 +162,12 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             MessageParser messageParser = MessageParser.parseObject(inputData, mappingRules,
                     outputFields);
             data = messageParser.getData();
-            String tenantId = data.get(SmcConstant.FmtFeildName.TENANT_ID);
-            String batchNo = data.get(SmcConstant.FmtFeildName.BATCH_NO);
-            String totalRecord = data.get(SmcConstant.FmtFeildName.TOTAL_RECORD);
-            String orderId = data.get(SmcConstant.FmtFeildName.ORDER_ID);
-            String feeItemId3pl = data.get(SmcConstant.FmtFeildName.FEE_ITEM_ID);
-            String itemFee3pl = data.get(SmcConstant.FmtFeildName.TOTAL_FEE);
+            String tenantId = data.get(SmcHbaseConstant.ColumnName.TENANT_ID);
+            String batchNo = data.get(SmcHbaseConstant.ColumnName.BATCH_NO);
+            String totalRecord = data.get(SmcHbaseConstant.ColumnName.TOTAL_RECORD);
+            String orderId = data.get(SmcHbaseConstant.ColumnName.ORDER_ID);
+            String feeItemId3pl = data.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID);
+            String itemFee3pl = data.get(SmcHbaseConstant.ColumnName.TOTAL_FEE);
             // 查询导入日志
             Map<String, String> params = new TreeMap<String, String>();
             params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);

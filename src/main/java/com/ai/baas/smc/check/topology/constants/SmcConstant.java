@@ -99,21 +99,6 @@ public class SmcConstant {
         }
     }
 
-    public static class FmtFeildName {
-        public static final String BATCH_NO = "batch_no";
-
-        public static final String TOTAL_RECORD = "total_record";
-
-        public static final String TENANT_ID = "tenant_id";
-
-        public static final String ORDER_ID = "order_id";
-
-        public static final String FEE_ITEM_ID = "fee_item_id";
-
-        public static final String TOTAL_FEE = "total_fee";
-
-    }
-
     public static class StlBillData {
         public static class BillFrom {
             /**
@@ -202,6 +187,7 @@ public class SmcConstant {
         }
 
     }
+
     public static class StlBillDetailDiffData {
         public static class CheckState {
             /**

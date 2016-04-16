@@ -12,19 +12,24 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import backtype.storm.task.TopologyContext;
+import backtype.storm.topology.BasicOutputCollector;
+import backtype.storm.topology.OutputFieldsDeclarer;
+import backtype.storm.topology.base.BaseBasicBolt;
+import backtype.storm.tuple.Tuple;
+
 import com.ai.baas.dshm.client.CacheFactoryUtil;
 import com.ai.baas.dshm.client.impl.CacheBLMapper;
 import com.ai.baas.dshm.client.impl.DshmClient;
 import com.ai.baas.dshm.client.interfaces.IDshmClient;
 import com.ai.baas.smc.check.topology.DAO.StlBillDataDAO;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant;
+import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.Dshm.FieldName;
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
-import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.Dshm.FieldName;
 import com.ai.baas.smc.check.topology.vo.StlBillData;
 import com.ai.baas.smc.check.topology.vo.StlBillDetailStyleItem;
-import com.ai.baas.smc.check.topology.vo.StlBillStyle;
 import com.ai.baas.smc.check.topology.vo.StlElement;
 import com.ai.baas.smc.check.topology.vo.StlPolicy;
 import com.ai.baas.storm.failbill.FailBillHandler;
@@ -41,12 +46,6 @@ import com.ai.opt.sdk.util.DateUtil;
 import com.ai.opt.sdk.util.StringUtil;
 import com.ai.paas.ipaas.mcs.interfaces.ICacheClient;
 import com.alibaba.fastjson.JSON;
-
-import backtype.storm.task.TopologyContext;
-import backtype.storm.topology.BasicOutputCollector;
-import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.topology.base.BaseBasicBolt;
-import backtype.storm.tuple.Tuple;
 
 /**
  * 校验<br>
@@ -123,8 +122,9 @@ public class DataValidationBolt extends BaseBasicBolt {
             String line = input.getStringByField(BaseConstants.RECORD_DATA);
             LOG.info("-------------------line==" + line);
             String tenantId = data.get(BaseConstants.TENANT_ID);
-            String batchNo = data.get(SmcConstant.FmtFeildName.BATCH_NO);
-            String orderId = data.get(SmcConstant.FmtFeildName.ORDER_ID);
+            String batchNo = data.get(SmcHbaseConstant.ColumnName.BATCH_NO);
+            String orderId = data.get(SmcHbaseConstant.ColumnName.ORDER_ID);
+            String itemFee = data.get(SmcHbaseConstant.ColumnName.ITEM_FEE);
             // 查询导入日志
             Map<String, String> params = new TreeMap<String, String>();
             params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);
@@ -251,8 +251,14 @@ public class DataValidationBolt extends BaseBasicBolt {
             put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                     SmcHbaseConstant.ColumnName.TENANT_ID.getBytes(), tenantId.getBytes());
             put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
-                    SmcHbaseConstant.ColumnName.TENANT_ID.getBytes(), tenantId.getBytes());
-
+                    SmcHbaseConstant.ColumnName.OBJECT_ID.getBytes(), objectId.getBytes());
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.BILL_FROM.getBytes(),
+                    SmcConstant.StlBillData.BillFrom.IMPORT.getBytes());
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY.getBytes(), rowKey.getBytes());
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.ITEM_FEE.getBytes(), itemFee.getBytes());
             put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                     SmcHbaseConstant.ColumnName.VERIFY_STATE.getBytes(), verifyState.getBytes());
             put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),

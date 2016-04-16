@@ -42,6 +42,16 @@ public final class SmcHbaseConstant {
 
         public static final String TENANT_ID = "tenant_id";
 
+        public static final String OBJECT_ID = "object_id";
+
+        public static final String BILL_FROM = "bill_from";
+
+        public static final String BATCH_NO = "batch_no";
+
+        public static final String TOTAL_RECORD = "total_record";
+
+        public static final String TOTAL_FEE = "total_fee";
+
     }
 
     /**
