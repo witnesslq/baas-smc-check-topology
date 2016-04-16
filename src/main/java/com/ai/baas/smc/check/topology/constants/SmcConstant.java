@@ -1,6 +1,17 @@
 package com.ai.baas.smc.check.topology.constants;
 
 public class SmcConstant {
+    public final static String CHARSET_UTF8 = "utf-8";
+
+    public final static String CHARSET_GBK = "gbk";
+
+    public static final String FIELD_SPLIT = new String(new char[] { (char) 1 });
+
+    public static final String RECORD_SPLIT = new String(new char[] { (char) 2 });
+
+    public static final String HEADER_SPLIT = new String(new char[] { (char) 3 });
+
+    public static final String CVSFILE_FEILD_SPLIT = ",";
 
     public static final String UNPACKING_BOLT = "unpacking";
 
@@ -60,6 +71,7 @@ public class SmcConstant {
             public static final String HAS_DIFFERENCE = "有差异";
         }
     }
+
     public static class StlBillDetailDiffData {
         public static class CheckState {
             /**

@@ -17,19 +17,36 @@ public final class SmcCacheConstant {
     public static final String BILL_DETAIL_ITEM = "bill.detail.item";
 
     public static final class TypeCode {
-        public static final String STL_POLICY_ITEM_PLAN = "STL_POLICY_ITEM_PLAN";
 
         private TypeCode() {
         }
 
+        public static final String STL_POLICY_ITEM_PLAN = "STL_POLICY_ITEM_PLAN";
+
+        public static final String SFTP_CONF = "SFTP_CONF";
+
+        public static final String AUTH = "AUTH";
+
+        public static final String DATA_COLLECT = "data_collect";
+
     }
 
     public static final class ParamCode {
-        public static final String FEE_ITEM = "FEE_ITEM";
 
         private ParamCode() {
         }
 
+        public static final String FEE_ITEM = "FEE_ITEM";
+
+        public static final String USER_NAME = "USER_NAME";
+
+        public static final String PWD = "PWD";
+
+        public static final String USER_ID = "USER_ID";
+
+        public static final String PAASWD = "PASSWD";
+
+        public static final String URL = "url";
     }
 
     public static final class NameSpace {
