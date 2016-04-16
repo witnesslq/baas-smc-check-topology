@@ -2,15 +2,33 @@ package com.ai.baas.smc.check.topology.core.bolt;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ai.baas.dshm.client.CacheFactoryUtil;
+import com.ai.baas.dshm.client.impl.CacheBLMapper;
+import com.ai.baas.dshm.client.impl.DshmClient;
+import com.ai.baas.dshm.client.interfaces.IDshmClient;
+import com.ai.baas.smc.check.topology.DAO.StlBillDataDAO;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant;
+import com.ai.baas.smc.check.topology.constants.SmcConstant;
+import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
+import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
+import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.Dshm.FieldName;
+import com.ai.baas.smc.check.topology.vo.StlBillData;
 import com.ai.baas.smc.check.topology.vo.StlBillDetailStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlBillStyle;
 import com.ai.baas.smc.check.topology.vo.StlElement;
 import com.ai.baas.smc.check.topology.vo.StlPolicy;
+import com.ai.baas.storm.failbill.FailBillHandler;
+import com.ai.baas.storm.jdbc.JdbcProxy;
 import com.ai.baas.storm.message.MappingRule;
 import com.ai.baas.storm.message.MessageParser;
 import com.ai.baas.storm.util.BaseConstants;
@@ -18,6 +36,8 @@ import com.ai.baas.storm.util.HBaseProxy;
 import com.ai.opt.base.exception.BusinessException;
 import com.ai.opt.base.exception.SystemException;
 import com.ai.opt.sdk.cache.factory.CacheClientFactory;
+import com.ai.opt.sdk.util.CollectionUtil;
+import com.ai.opt.sdk.util.DateUtil;
 import com.ai.opt.sdk.util.StringUtil;
 import com.ai.paas.ipaas.mcs.interfaces.ICacheClient;
 import com.alibaba.fastjson.JSON;
@@ -40,19 +60,40 @@ public class DataValidationBolt extends BaseBasicBolt {
 
     private static Logger LOG = LoggerFactory.getLogger(DataValidationBolt.class);
 
-    private ICacheClient cacheClient;
+    private ICacheClient billStyleCacheClient;
+
+    private ICacheClient elementCacheClient;
+
+    private ICacheClient calParamCacheClient;
+
+    private ICacheClient countCacheClient;
 
     private MappingRule[] mappingRules = new MappingRule[2];
 
     private String[] outputFields = new String[] { "data" };
 
+    private IDshmClient dshmClient;
+
+    private StlBillDataDAO stlBillDataDAO;
+
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
         LOG.info("数据校验bolt[prepare方法]...");
         super.prepare(stormConf, context);
-        if (cacheClient == null) {
-            cacheClient = CacheClientFactory
+        if (billStyleCacheClient == null) {
+            billStyleCacheClient = CacheClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
+        }
+        if (elementCacheClient == null) {
+            elementCacheClient = CacheClientFactory
+                    .getCacheClient(SmcCacheConstant.NameSpace.ELEMENT_CACHE);
+        }
+        if (calParamCacheClient == null) {
+            calParamCacheClient = CacheFactoryUtil.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
+        }
+        if (countCacheClient == null) {
+            countCacheClient = CacheClientFactory
+                    .getCacheClient(SmcCacheConstant.NameSpace.CHECK_COUNT_CACHE);
         }
         /* 初始化hbase */
         HBaseProxy.loadResource(stormConf);
@@ -60,56 +101,182 @@ public class DataValidationBolt extends BaseBasicBolt {
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,
                 BaseConstants.JDBC_DEFAULT);
         mappingRules[1] = mappingRules[0];
+        if (dshmClient == null) {
+            dshmClient = new DshmClient();
+        }
+        if (stlBillDataDAO == null) {
+            stlBillDataDAO = new StlBillDataDAO();
+        }
     }
 
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
-        /* 接收输入报文 */
-        String inputData = input.getString(0);
-        LOG.info("数据校验bolt输入消息报文：[" + inputData + "]...");
-        /* 解析报文 */
-        MessageParser messageParser = null;
+        Map<String, String> data = null;
         try {
+            /* 接收输入报文 */
+            String inputData = input.getString(0);
+            LOG.info("数据校验bolt输入消息报文：[" + inputData + "]...");
+            /* 解析报文 */
+            MessageParser messageParser = null;
             messageParser = MessageParser.parseObject(inputData, mappingRules, outputFields);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        Map<String, String> data = messageParser.getData();
-        String line = input.getStringByField(BaseConstants.RECORD_DATA);
-        LOG.info("-------------------line==" + line);
-        String policyCode = "";
-        String tenantId = data.get(BaseConstants.TENANT_ID);
-        // 根据政策编码获取账单格式定义
-        String policyStr = cacheClient.get(tenantId + "." + policyCode);
-        if (StringUtil.isBlank(policyStr)) {
-            throw new SystemException("政策编码[" + policyCode + "]定义不存在");
-        }
-        StlPolicy stlPolicy = JSON.parseObject(policyStr, StlPolicy.class);
-        String billStyleSn = stlPolicy.getBillStyleSn();
-        /* 获取此账单格式定义下的所有的详单项定义； */
-        String billDetailStyleStr = cacheClient.get(tenantId + "." + billStyleSn + "."
-                + SmcCacheConstant.BILL_DETAIL_ITEM);
-        if (StringUtil.isBlank(billDetailStyleStr)) {
-            throw new SystemException("账单样式编码[" + billStyleSn + "]详单项定义不存在");
-        }
-        List<StlBillDetailStyleItem> stlBillDetailStyleItems = JSON.parseArray(billDetailStyleStr,
-                StlBillDetailStyleItem.class);
-        /* 判断本详单数据是否满足详单项的格式定义（是否必填，取值类型）。 */
-        for (int i = 0; i < stlBillDetailStyleItems.size(); i++) {
-            StlBillDetailStyleItem stlBillDetailStyleItem = stlBillDetailStyleItems.get(i);
-            Long elementId = stlBillDetailStyleItem.getElementId();
-            StringBuilder key = new StringBuilder();
-            key.append(stlBillDetailStyleItem.getTenantId()).append(".").append(elementId);
-            String elementStr = cacheClient.get(key.toString());
-            if (StringUtil.isBlank(elementStr)) {
-                throw new SystemException("元素ID[" + elementId + "]不存在");
+            data = messageParser.getData();
+            String line = input.getStringByField(BaseConstants.RECORD_DATA);
+            LOG.info("-------------------line==" + line);
+            String tenantId = data.get(BaseConstants.TENANT_ID);
+            String batchNo = data.get(SmcConstant.FmtFeildName.BATCH_NO);
+            String orderId = data.get(SmcConstant.FmtFeildName.ORDER_ID);
+            // 查询导入日志
+            Map<String, String> params = new TreeMap<String, String>();
+            params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);
+            params.put(SmcCacheConstant.Dshm.FieldName.BATCH_NO, batchNo);
+            List<Map<String, String>> results = dshmClient
+                    .list(SmcCacheConstant.Dshm.TableName.STL_IMPORT_LOG).where(params)
+                    .executeQuery(calParamCacheClient);
+            if (CollectionUtil.isEmpty(results)) {
+                throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "导入日志不存在");
             }
-            StlElement stlElement = JSON.parseObject(elementStr, StlElement.class);
+            Map<String, String> importLogMap = results.get(0);// 导入日志map
+            String billTimeSn = importLogMap.get(FieldName.BILL_TIME_SN);// 账期
+            String yyyyMm = StringUtil.restrictLength(billTimeSn, 6);
+            String objectId = importLogMap.get(FieldName.OBJECT_ID);// 数据对象
+            // 查询第三方账单
+            StlBillData stlBillDataQuery = new StlBillData();
+            stlBillDataQuery.setTenantId(tenantId);
+            stlBillDataQuery.setBatchNo(batchNo);
+            stlBillDataQuery.setBillFrom(SmcConstant.StlBillData.BillFrom.IMPORT);
+            stlBillDataQuery.setBillTimeSn(billTimeSn);
+            List<StlBillData> stlBillDatas = stlBillDataDAO.query(
+                    JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT), yyyyMm, stlBillDataQuery);
+            StlBillData billData3pl = stlBillDatas.get(0);// 第三方账单
+            String policyCode = billData3pl.getPolicyCode();// 政策编码
+            Long billId3pl = billData3pl.getBillId();// 第三方账单ID
+            // 根据政策编码获取账单格式定义
+            String policyStr = billStyleCacheClient.get(tenantId + "." + policyCode);
+            if (StringUtil.isBlank(policyStr)) {
+                throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "政策编码["
+                        + policyCode + "]定义不存在");
+            }
+            StlPolicy stlPolicy = JSON.parseObject(policyStr, StlPolicy.class);
+            String billStyleSn = stlPolicy.getBillStyleSn();
+            /* 获取此账单格式定义下的所有的详单项定义； */
+            String billDetailStyleStr = billStyleCacheClient.get(tenantId + "." + billStyleSn + "."
+                    + SmcCacheConstant.BILL_DETAIL_ITEM);
+            if (StringUtil.isBlank(billDetailStyleStr)) {
+                throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "账单样式编码["
+                        + billStyleSn + "]详单项定义不存在");
+            }
+            List<StlBillDetailStyleItem> stlBillDetailStyleItems = JSON.parseArray(
+                    billDetailStyleStr, StlBillDetailStyleItem.class);
+            /* 判断本详单数据是否满足详单项的格式定义（是否必填，取值类型）。 */
+            String verifyState = SmcConstant.StlBillItemData.VerifyState.PASS;
+            String verifyDesc = "通过";
+            try {
+                for (int i = 0; i < stlBillDetailStyleItems.size(); i++) {
+                    StlBillDetailStyleItem stlBillDetailStyleItem = stlBillDetailStyleItems.get(i);
+                    Long elementId = stlBillDetailStyleItem.getElementId();
+                    String key = new StringBuilder().append(stlBillDetailStyleItem.getTenantId())
+                            .append(SmcCacheConstant.CACHE_KEY_SPLIT).append(elementId).toString();
+                    String elementStr = elementCacheClient.get(key.toString());
+                    if (StringUtil.isBlank(elementStr)) {
+                        throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION,
+                                "元素ID[" + elementId + "]不存在");
+                    }
+                    StlElement stlElement = JSON.parseObject(elementStr, StlElement.class);
+                    String value = data.get(stlBillDetailStyleItem.getItemCode());
+                    if (SmcConstant.StlElement.IsNecessary.YES.equals(stlElement.getIsNecessary())) {
+                        if (StringUtil.isBlank(value)) {
+                            throw new BusinessException(SmcExceptCodeConstant.PARAM_IS_NULL, "["
+                                    + stlBillDetailStyleItem.getItemCode() + "]不能为空");
+                        }
+                    }
+                    if (!StringUtil.isBlank(value)) {
+                        if (SmcConstant.StlElement.ValueType.DATE_TIME.equals(stlElement
+                                .getValueType())) {
+                            try {
+                                DateUtil.getTimestamp(value, DateUtil.YYYYMMDDHHMMSS);
+                            } catch (SystemException e) {
+                                throw new BusinessException(
+                                        SmcExceptCodeConstant.PARAM_TYPE_NOT_RIGHT, "["
+                                                + stlBillDetailStyleItem.getItemCode() + "]格式不正确");
+                            }
+                        } else if (SmcConstant.StlElement.ValueType.ENUM.equals(stlElement
+                                .getValueType())) {
+
+                        } else if (SmcConstant.StlElement.ValueType.FLOAT.equals(stlElement
+                                .getValueType())) {
+                            try {
+                                Float.parseFloat(value);
+                            } catch (SystemException e) {
+                                throw new BusinessException(
+                                        SmcExceptCodeConstant.PARAM_TYPE_NOT_RIGHT, "["
+                                                + stlBillDetailStyleItem.getItemCode() + "]格式不正确");
+                            }
+                        } else if (SmcConstant.StlElement.ValueType.INT.equals(stlElement
+                                .getValueType())) {
+                            try {
+                                Integer.parseInt(value);
+                            } catch (SystemException e) {
+                                throw new BusinessException(
+                                        SmcExceptCodeConstant.PARAM_TYPE_NOT_RIGHT, "["
+                                                + stlBillDetailStyleItem.getItemCode() + "]格式不正确");
+                            }
+                        } else if (SmcConstant.StlElement.ValueType.STRING.equals(stlElement
+                                .getValueType())) {
+
+                        }
+                    }
+                }
+            } catch (BusinessException e) {
+                verifyState = SmcConstant.StlBillItemData.VerifyState.NOT_PASS;
+                verifyDesc = e.getErrorMessage();
+            }
+
+            // 如果不满足则记录原因，沉淀数据库（在对应的详单数据记录后面增加一下校验结果【失败】及失败原因）。
+            // 如果满足，则沉淀数据库（在对应的详单数据记录后面增加一下校验结果:通过）。
+            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
+            String rowKey = new StringBuilder().append(tenantId)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billId3pl)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    .append(SmcConstant.StlBillData.BillFrom.IMPORT)
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderId).toString();
+            Put put = new Put(rowKey.getBytes());
+            for (Entry<String, String> entry : data.entrySet()) {
+                put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(), entry.getKey()
+                        .getBytes(), entry.getValue().getBytes());
+            }
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.BILL_ID.getBytes(), Bytes.toBytes(billId3pl));
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.TENANT_ID.getBytes(), tenantId.getBytes());
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.TENANT_ID.getBytes(), tenantId.getBytes());
+
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.VERIFY_STATE.getBytes(), verifyState.getBytes());
+            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                    SmcHbaseConstant.ColumnName.VERIFY_DESC.getBytes(), verifyDesc.getBytes());
+            Table table = HBaseProxy.getConnection().getTable(
+                    TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DATA_ + yyyyMm));
+            table.put(put);
+            /* 更新结算详单校验计数器（redis）的校验通过记录数和校验失败记录数。 */
+            String countKey;
+            if (SmcConstant.StlBillItemData.VerifyState.PASS.equals(verifyState)) {
+                countKey = "billdata_" + tenantId + "_" + batchNo + "_verify_success";
+            } else {
+                countKey = "billdata_" + tenantId + "_" + batchNo + "_verify_failure";
+            }
+            countCacheClient.incr(countKey);
+        } catch (BusinessException e) {
+            FailBillHandler.addFailBillMsg(data, SmcConstant.DATA_VALIDATION_BOLT,
+                    e.getErrorCode(), e.getErrorMessage());
+        } catch (Exception e) {
+            FailBillHandler.addFailBillMsg(data, SmcConstant.DATA_VALIDATION_BOLT,
+                    SmcExceptCodeConstant.SYSTEM_EXCEPTION, e.getMessage());
+        } finally {
 
         }
-        /* 如果不满足则记录原因，沉淀数据库（在对应的详单数据记录后面增加一下校验结果【失败】及失败原因），并发送数据校验异常消息。 */
-        /* 如果满足，则沉淀数据库（在对应的详单数据记录后面增加一下校验结果:通过），并发送数据校验通过消息。 */
-        /* 更新结算详单校验计数器（redis）的校验通过记录数和校验失败记录数。 */
 
     }
 

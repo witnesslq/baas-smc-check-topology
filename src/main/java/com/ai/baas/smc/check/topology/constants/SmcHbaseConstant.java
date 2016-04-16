@@ -34,6 +34,14 @@ public final class SmcHbaseConstant {
 
         public static final String CHECK_STATE_DESC = "check_state_desc";
 
+        public static final String VERIFY_STATE = "verify_state";
+
+        public static final String VERIFY_DESC = "verify_desc";
+
+        public static final String BILL_ID = "bill_id";
+
+        public static final String TENANT_ID = "tenant_id";
+
     }
 
     /**

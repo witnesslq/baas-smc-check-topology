@@ -17,6 +17,11 @@ public class SmcExceptCodeConstant {
     public static final String PARAM_IS_NULL = "888888";
 
     /**
+     * 系统异常
+     */
+    public static final String SYSTEM_EXCEPTION = "999999";
+
+    /**
      * 查询无记录
      */
     public static final String NO_RESULT = "000001";

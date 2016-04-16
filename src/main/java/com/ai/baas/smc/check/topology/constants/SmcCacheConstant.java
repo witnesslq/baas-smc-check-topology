@@ -47,6 +47,8 @@ public final class SmcCacheConstant {
         public static final String PAASWD = "PASSWD";
 
         public static final String URL = "url";
+
+        public static final String UPLOAD_URL = "upload_url";
     }
 
     public static final class NameSpace {

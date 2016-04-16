@@ -11,6 +11,7 @@ import java.io.OutputStreamWriter;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -59,6 +60,7 @@ import com.ai.baas.smc.check.topology.vo.StlBillItemData;
 import com.ai.baas.smc.check.topology.vo.StlBillStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlPolicy;
 import com.ai.baas.smc.check.topology.vo.StlSysParam;
+import com.ai.baas.storm.failbill.FailBillHandler;
 import com.ai.baas.storm.jdbc.JdbcProxy;
 import com.ai.baas.storm.message.MappingRule;
 import com.ai.baas.storm.message.MessageParser;
@@ -73,6 +75,12 @@ import com.ai.opt.sdk.util.StringUtil;
 import com.ai.paas.ipaas.mcs.interfaces.ICacheClient;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
 
 /**
  * 对账<br>
@@ -147,12 +155,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
+        Map<String, String> data = null;
         try {
             String inputData = input.getString(0);
             /* 1.获取并解析输入信息 */
             MessageParser messageParser = MessageParser.parseObject(inputData, mappingRules,
                     outputFields);
-            Map<String, String> data = messageParser.getData();
+            data = messageParser.getData();
             String tenantId = data.get(SmcConstant.FmtFeildName.TENANT_ID);
             String batchNo = data.get(SmcConstant.FmtFeildName.BATCH_NO);
             String totalRecord = data.get(SmcConstant.FmtFeildName.TOTAL_RECORD);
@@ -379,8 +388,14 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 生成文件
             createFile(billData3pl, billDataSys, objectId, batchNo, stlBillStyleItems);
             // 8， 完成
+        } catch (BusinessException e) {
+            FailBillHandler.addFailBillMsg(data, SmcConstant.BILL_DETAIL_CHECK_BOLT,
+                    e.getErrorCode(), e.getErrorMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            FailBillHandler.addFailBillMsg(data, SmcConstant.BILL_DETAIL_CHECK_BOLT,
+                    SmcExceptCodeConstant.SYSTEM_EXCEPTION, e.getMessage());
+        } finally {
+
         }
 
     }
@@ -635,13 +650,59 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
             FileOutputStream outputStream = new FileOutputStream(targetPath + "/" + targetName);
             ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(outputStream));
-
             createCompressedFile(out, resourcesFile, "");
-
             out.close();
             // 上传到ftp
+            String url = getSysParams(tenantId, TypeCode.SFTP_CONF, ParamCode.UPLOAD_URL).get(0)
+                    .getColumnValue();
+            String host = url.split(":")[0];
+            int port = 22;
+            String username = getSysParams(tenantId, TypeCode.SFTP_CONF, ParamCode.USER_NAME)
+                    .get(0).getColumnValue();
+            String password = getSysParams(tenantId, TypeCode.SFTP_CONF, ParamCode.PWD).get(0)
+                    .getColumnValue();
+            ChannelSftp sftp = null;
+            JSch jsch = new JSch();
+            jsch.getSession(username, host, port);
+            Session session = jsch.getSession(username, host, port);
+            session.setPassword(password);
+            Properties sshConfig = new Properties();
+            sshConfig.put("StrictHostKeyChecking", "no");
+            session.setConfig(sshConfig);
+            session.connect();
+            Channel channel = session.openChannel("sftp");
+            channel.connect();
+            sftp = (ChannelSftp) channel;
+            System.out.println("Connected to " + host + " success");
+            String directory = url.split(":")[1];
+            String uploadFile = targetPath + "/" + targetName;
+            try {
+                sftp.cd(directory);
+            } catch (SftpException sException) {
+                if (ChannelSftp.SSH_FX_NO_SUCH_FILE == sException.id) {
+                    makeDir(directory, sftp);
+                    sftp.cd(directory);
+                }
+            }
 
+            File fileUploadZip = new File(uploadFile);
+            sftp.put(new FileInputStream(fileUploadZip), fileUploadZip.getName());
+            sftp.disconnect();
+            if (session != null) {
+                if (session.isConnected()) {
+                    session.disconnect();
+                }
+            }
+            if (channel != null) {
+                if (channel.isConnected()) {
+                    channel.disconnect();
+                }
+            }
         } catch (IOException e) {
+            throw new SystemException(e);
+        } catch (SftpException e) {
+            throw new SystemException(e);
+        } catch (JSchException e) {
             throw new SystemException(e);
         } finally {
             try {
@@ -649,6 +710,24 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             } catch (IOException e) {
                 LOG.error("WorkBook关闭失败", e);
             }
+        }
+    }
+
+    private static void makeDir(String directory, ChannelSftp sftp) throws SftpException {
+        System.out.println(directory);
+        System.out.println(sftp.pwd());
+        String parentPath = new File(directory).getParentFile().getPath().replace("\\", "/");
+        if (parentPath.equals("/")) {
+            sftp.mkdir(directory.substring(1));
+        } else {
+            try {
+                sftp.cd(parentPath);
+            } catch (SftpException sException) {
+                if (ChannelSftp.SSH_FX_NO_SUCH_FILE == sException.id) {
+                    makeDir(parentPath, sftp);
+                }
+            }
+            sftp.mkdir(directory);
         }
     }
 
