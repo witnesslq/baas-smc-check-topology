@@ -1,5 +1,6 @@
 package com.ai.baas.smc.check.topology.core.bolt;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -16,6 +17,7 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseBasicBolt;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 
 import com.ai.baas.dshm.client.CacheFactoryUtil;
@@ -79,6 +81,7 @@ public class DataValidationBolt extends BaseBasicBolt {
     public void prepare(Map stormConf, TopologyContext context) {
         LOG.info("数据校验bolt[prepare方法]...");
         super.prepare(stormConf, context);
+        JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         if (billStyleCacheClient == null) {
             billStyleCacheClient = CacheClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
@@ -274,6 +277,11 @@ public class DataValidationBolt extends BaseBasicBolt {
                 countKey = "billdata_" + tenantId + "_" + batchNo + "_verify_failure";
             }
             countCacheClient.incr(countKey);
+            // 报文发送到下一环节
+            List<Object> value = messageParser.toTupleData();
+            if (!CollectionUtil.isEmpty(value)) {
+                collector.emit(value);
+            }
         } catch (BusinessException e) {
             FailBillHandler.addFailBillMsg(data, SmcConstant.DATA_VALIDATION_BOLT,
                     e.getErrorCode(), e.getErrorMessage());
@@ -288,7 +296,7 @@ public class DataValidationBolt extends BaseBasicBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        // TODO Auto-generated method stub
+        declarer.declare(new Fields(outputFields));
 
     }
 }

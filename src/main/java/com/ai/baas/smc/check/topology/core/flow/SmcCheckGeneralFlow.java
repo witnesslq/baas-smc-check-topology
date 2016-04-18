@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.smc.check.topology.core.bolt.BillDetailCheckBolt;
 import com.ai.baas.smc.check.topology.core.bolt.DataValidationBolt;
+import com.ai.baas.smc.check.topology.core.bolt.DuplicateCheckingBolt;
 import com.ai.baas.smc.check.topology.core.bolt.UnpackingBolt;
 import com.ai.baas.storm.flow.BaseFlow;
 import com.ai.baas.storm.util.BaseConstants;
@@ -19,12 +20,15 @@ public class SmcCheckGeneralFlow extends BaseFlow {
         /* 解包bolt */
         builder.setBolt(SmcConstant.UNPACKING_BOLT, new UnpackingBolt(), 1).shuffleGrouping(
                 BaseConstants.KAFKA_SPOUT_NAME);
+        /* 查重 */
+        builder.setBolt(SmcConstant.DUPLICATE_CHECK_BOLT, new DuplicateCheckingBolt(), 1)
+                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
         /* 数据校验bolt */
-//        builder.setBolt(SmcCheckConstant.DATA_VALIDATION_BOLT, new DataValidationBolt(), 1)
-//                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
+        builder.setBolt(SmcConstant.DATA_VALIDATION_BOLT, new DataValidationBolt(), 1)
+                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
         /* 对账bolt */
-//        builder.setBolt(SmcCheckConstant.BILL_DETAIL_CHECK_BOLT, new BillDetailCheckBolt(), 1)
-//                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
+        builder.setBolt(SmcConstant.BILL_DETAIL_CHECK_BOLT, new BillDetailCheckBolt(), 1)
+                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
     }
 
     public static void main(String[] args) {

@@ -8,18 +8,18 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.Properties;
+import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -40,6 +40,7 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseBasicBolt;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 
 import com.ai.baas.dshm.client.CacheFactoryUtil;
@@ -117,6 +118,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
         super.prepare(stormConf, context);
+        JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         if (policyCacheClient == null) {
             policyCacheClient = CacheClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.POLICY_CACHE);
@@ -158,6 +160,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         Map<String, String> data = null;
         try {
             String inputData = input.getString(0);
+            LOG.info(" ====== 开始执行对账bolt，inputData = [" + inputData + "]");
             /* 1.获取并解析输入信息 */
             MessageParser messageParser = MessageParser.parseObject(inputData, mappingRules,
                     outputFields);
@@ -806,7 +809,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-
+        declarer.declare(new Fields(outputFields));
     }
 
 }

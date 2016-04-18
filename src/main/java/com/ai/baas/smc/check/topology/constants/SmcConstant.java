@@ -19,6 +19,8 @@ public class SmcConstant {
 
     public static final String BILL_DETAIL_CHECK_BOLT = "bill_detail_checking";
 
+    public static final String DUPLICATE_CHECK_BOLT = "duplicate_checking";
+
     /**
      * 基础元素表<br>
      * Date: 2016年3月17日 <br>

@@ -35,4 +35,9 @@ public class SmcExceptCodeConstant {
      * 未配置系统参数或未刷新缓存
      */
     public static final String NO_DATA_OR_CACAE_ERROR = "000003";
+
+    /**
+     * 重复流水
+     */
+    public static final String FAIL_CODE_DUP = "000004";
 }

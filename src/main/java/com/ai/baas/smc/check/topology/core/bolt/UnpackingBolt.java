@@ -40,7 +40,7 @@ public class UnpackingBolt extends BaseBasicBolt {
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
-        LOG.info("===============UnpackingBolt.prepare====");
+        LOG.info(" ====== UnpackingBolt.prepare");
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,
                 BaseConstants.JDBC_DEFAULT);
@@ -49,11 +49,11 @@ public class UnpackingBolt extends BaseBasicBolt {
 
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
-        System.out.println("Tuple = " + JSON.toJSONString(input));
+        System.out.println(" ====== 开始执行解包bolt，Tuple = " + JSON.toJSONString(input));
         String line = "";
         try {
             line = input.getString(0);
-            System.out.println("解包bolt接收到消息报文:[" + line + "]");
+            System.out.println(" ====== 解包bolt接收到消息报文:[" + line + "]");
             List<Object> values = null;
             String[] inputDatas = StringUtils.splitPreserveAllTokens(line,
                     BaseConstants.RECORD_SPLIT);
@@ -66,7 +66,7 @@ public class UnpackingBolt extends BaseBasicBolt {
                 }
             }
         } catch (Exception e) {
-            LOG.error("解包失败", e);
+            LOG.error("[" + line + "]解包失败", e);
         }
     }
 
