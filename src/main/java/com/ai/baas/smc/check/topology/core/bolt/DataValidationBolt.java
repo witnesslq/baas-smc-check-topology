@@ -236,7 +236,7 @@ public class DataValidationBolt extends BaseBasicBolt {
 
             // 如果不满足则记录原因，沉淀数据库（在对应的详单数据记录后面增加一下校验结果【失败】及失败原因）。
             // 如果满足，则沉淀数据库（在对应的详单数据记录后面增加一下校验结果:通过）。
-            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
+            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID
             String rowKey = new StringBuilder().append(tenantId)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billId3pl)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)

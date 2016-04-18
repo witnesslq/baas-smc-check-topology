@@ -49,6 +49,7 @@ import com.ai.baas.dshm.client.impl.DshmClient;
 import com.ai.baas.dshm.client.interfaces.IDshmClient;
 import com.ai.baas.smc.check.topology.DAO.StlBillDataDAO;
 import com.ai.baas.smc.check.topology.DAO.StlBillItemDataDAO;
+import com.ai.baas.smc.check.topology.DAO.StlImportLogDAO;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.Dshm.FieldName;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.ParamCode;
@@ -59,6 +60,7 @@ import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
 import com.ai.baas.smc.check.topology.vo.StlBillData;
 import com.ai.baas.smc.check.topology.vo.StlBillItemData;
 import com.ai.baas.smc.check.topology.vo.StlBillStyleItem;
+import com.ai.baas.smc.check.topology.vo.StlImportLog;
 import com.ai.baas.smc.check.topology.vo.StlPolicy;
 import com.ai.baas.smc.check.topology.vo.StlSysParam;
 import com.ai.baas.storm.failbill.FailBillHandler;
@@ -115,6 +117,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     private StlBillItemDataDAO stlBillItemDataDAO;
 
+    private StlImportLogDAO importLogDAO;
+
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
         super.prepare(stormConf, context);
@@ -152,7 +156,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         if (stlBillItemDataDAO == null) {
             stlBillItemDataDAO = new StlBillItemDataDAO();
         }
-
+        if (importLogDAO == null) {
+            importLogDAO = new StlImportLogDAO();
+        }
     }
 
     @Override
@@ -389,7 +395,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // b) 修改账单数据表（第三方账单和本系统结算算费结果帐单）中的对账结果（差异金额为0则沉淀状态为账单一致，否则沉淀状态为有差异）。
             // 7， 如果对账结果为有差异，则调用对账错误详单文件生成方法，生成错误详单文件，并向账详单处理结果文件清单表新增记录。
             // 生成文件
-            createFile(billData3pl, billDataSys, objectId, batchNo, stlBillStyleItems);
+            createFile(billData3pl, billDataSys, objectId, batchNo, stlBillStyleItems,
+                    importLogMap, totalRecord);
             // 8， 完成
         } catch (BusinessException e) {
             FailBillHandler.addFailBillMsg(data, SmcConstant.BILL_DETAIL_CHECK_BOLT,
@@ -404,7 +411,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
     }
 
     private void createFile(StlBillData billData3pl, StlBillData billDataSys, String objectId,
-            String batchNo, List<StlBillStyleItem> stlBillStyleItems) {
+            String batchNo, List<StlBillStyleItem> stlBillStyleItems,
+            Map<String, String> importLogMap, String totalRecordDetail) {
         String tenantId = billData3pl.getTenantId();
         Long billId3pl = billData3pl.getBillId();
         Long billIdSys = billDataSys.getBillId();
@@ -465,11 +473,11 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             cell = row3.createCell(0);
             cell.setCellValue("结算金额(元)");
             cell = row3.createCell(1);
-            cell.setCellValue(billData3pl.getOrigFee());
+            cell.setCellValue(billData3pl.getOrigFee() / 1000);
             cell = row3.createCell(2);
             cell.setCellValue("差异金额(元)");
             cell = row3.createCell(3);
-            cell.setCellValue(billData3pl.getDiffFee());
+            cell.setCellValue(billData3pl.getDiffFee() / 1000);
 
             XSSFRow row5 = sheet0.createRow(5);// 第六行
             cell = row5.createCell(0);
@@ -491,9 +499,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         TypeCode.STL_POLICY_ITEM_PLAN, ParamCode.FEE_ITEM,
                         stlBillItemData.getFeeItemId()));
                 cell = rowTmp.createCell(2);
-                cell.setCellValue(stlBillItemData.getTotalFee());
+                cell.setCellValue(stlBillItemData.getTotalFee() / 1000);
                 cell = rowTmp.createCell(3);
-                cell.setCellValue(stlBillItemData.getDiffFee());
+                cell.setCellValue(stlBillItemData.getDiffFee() / 1000);
             }
 
             String excelFileName = "ERR_" + billData3pl.getTenantId() + "_"
@@ -626,8 +634,10 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE
                             .getBytes())));
                     writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                    writer.write(new String(
-                            map.get(SmcHbaseConstant.ColumnName.DIFF_FEE.getBytes())));
+                    String diffFee = new String(map.get(SmcHbaseConstant.ColumnName.DIFF_FEE
+                            .getBytes()));
+
+                    writer.write(String.valueOf(Float.parseFloat(diffFee) / 1000));
                     writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                     writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE_DESC
                             .getBytes())));
@@ -656,8 +666,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             createCompressedFile(out, resourcesFile, "");
             out.close();
             // 上传到ftp
-            String url = getSysParams(tenantId, TypeCode.SFTP_CONF, ParamCode.UPLOAD_URL).get(0)
-                    .getColumnValue();
+            String url = getSysParams(tenantId, TypeCode.SFTP_CONF, ParamCode.UPLOAD_URL_DIFF_FILE)
+                    .get(0).getColumnValue();
             String host = url.split(":")[0];
             int port = 22;
             String username = getSysParams(tenantId, TypeCode.SFTP_CONF, ParamCode.USER_NAME)
@@ -701,11 +711,24 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     channel.disconnect();
                 }
             }
+            // 更新导入日志表
+            StlImportLog importLog = new StlImportLog();
+            importLog.setTenantId(importLogMap.get(SmcCacheConstant.Dshm.FieldName.TENANT_ID));
+            importLog.setLogId(Long.parseLong(importLogMap
+                    .get(SmcCacheConstant.Dshm.FieldName.LOG_ID)));
+            importLog.setImportRecords(Long.parseLong(totalRecordDetail));
+            importLog.setRstFileName(targetName);
+            importLog.setRstFileUrl(url);
+            importLog.setState(SmcConstant.StlImportLog.State.DATA_SUCCESS);
+            importLog.setStateDesc("数据处理完成");
+            importLogDAO.update(JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT), importLog);
         } catch (IOException e) {
             throw new SystemException(e);
         } catch (SftpException e) {
             throw new SystemException(e);
         } catch (JSchException e) {
+            throw new SystemException(e);
+        } catch (Exception e) {
             throw new SystemException(e);
         } finally {
             try {

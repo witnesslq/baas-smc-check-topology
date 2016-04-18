@@ -100,7 +100,65 @@ public class SmcConstant {
             public static final String NO = "0";
         }
     }
+	public static class StlImportLog {
+        public static class DataType {
+            /**
+             * 业务流水
+             */
+            public static final String ORDER = "order";
 
+            /**
+             * 账单
+             */
+            public static final String BILL = "bill";
+        }
+
+        public static class State {
+            /**
+             * 已上传
+             */
+            public static final String uploaded = "0";
+
+            /**
+             * 导入处理中
+             */
+            public static final String IMPORT_PROCESSING = "1";
+
+            /**
+             * 导入完成
+             */
+            public static final String IMPORT_SUCCESS = "2";
+
+            /**
+             * 数据处理中
+             */
+            public static final String DATA_PROCESSING = "3";
+
+            /**
+             * 数据处理完成
+             */
+            public static final String DATA_SUCCESS = "4";
+
+            /**
+             * 异常
+             */
+            public static final String EXCEPTION = "9";
+        }
+
+        public static class StateDesc {
+            public static final String uploaded = "已上传";
+
+            public static final String IMPORT_PROCESSING = "导入处理中";
+
+            public static final String IMPORT_SUCCESS = "导入完成";
+
+            public static final String DATA_PROCESSING = "数据处理中";
+
+            public static final String DATA_SUCCESS = "数据处理完成";
+
+            public static final String EXCEPTION = "异常";
+        }
+    }
     public static class StlBillData {
         public static class BillFrom {
             /**

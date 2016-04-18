@@ -17,6 +17,7 @@ import backtype.storm.tuple.Tuple;
 
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
+import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
 import com.ai.baas.storm.duplicate.DuplicateCheckingConfig;
 import com.ai.baas.storm.duplicate.DuplicateCheckingFromHBase;
 import com.ai.baas.storm.failbill.FailBillHandler;
@@ -62,6 +63,8 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
             MessageParser messageParser = MessageParser.parseObject(inputData, mappingRules,
                     outputFields);
             data = messageParser.getData();
+            data.put(SmcHbaseConstant.ColumnName.TOTAL_FEE, String.valueOf(Long.parseLong(data
+                    .get(SmcHbaseConstant.ColumnName.TOTAL_FEE)) * 1000));
             /* 3.查重 */
             DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
             if (!checking.checkData(data)) {
