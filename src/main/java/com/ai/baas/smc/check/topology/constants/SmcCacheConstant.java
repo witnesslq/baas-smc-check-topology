@@ -48,7 +48,7 @@ public final class SmcCacheConstant {
 
         public static final String URL = "url";
 
-        public static final String UPLOAD_URL = "upload_url";
+        public static final String UPLOAD_URL_DIFF_FILE = "upload_url_diff_file";
     }
 
     public static final class NameSpace {
@@ -87,6 +87,8 @@ public final class SmcCacheConstant {
             public static final String BILL_TIME_SN = "bill_time_sn";
 
             public static final String OBJECT_ID = "object_id";
+
+            public static final String LOG_ID = "log_id";
 
         }
 
