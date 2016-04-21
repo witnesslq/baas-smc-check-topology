@@ -32,7 +32,7 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
 
     private static Logger LOG = LoggerFactory.getLogger(DuplicateCheckingBolt.class);
 
-    private String[] outputFields;
+    private String[] outputFields = new String[] { "data" };
 
     private MappingRule[] mappingRules = new MappingRule[2];
 
