@@ -29,8 +29,7 @@ public class StlBillDataDAO {
         sqlBuilder.append(" CREATE_TIME createTime");
         sqlBuilder.append(" from stl_bill_data_").append(yyyyMm);
         if (stlBillData != null) {
-            sqlBuilder.append(" where tenant_id = :tenant_id");
-            // sqlBuilder.append(" where tenant_id = '").append(stlBillData.getTenantId()).append("'");
+            sqlBuilder.append(" where tenant_id = '").append(stlBillData.getTenantId()).append("'");
             if (!StringUtil.isBlank(stlBillData.getBatchNo())) {
                 sqlBuilder.append(" and batch_no = '").append(stlBillData.getBatchNo()).append("'");
             }
@@ -43,9 +42,8 @@ public class StlBillDataDAO {
                         .append("'");
             }
         }
-        Map<String, Object> map = new HashMap<String, Object>();
-        map.put("tenant_id", stlBillData.getTenantId());
+
         return JdbcTemplate.query(sqlBuilder.toString(), conn, new BeanListHandler<>(
-                StlBillData.class), map);
+                StlBillData.class));
     }
 }
