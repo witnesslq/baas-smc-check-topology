@@ -423,7 +423,6 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         stlBillItemDataQuery.setTenantId(billData3pl.getTenantId());
         stlBillItemDataQuery.setBillId(billData3pl.getBillId());
         List<StlBillItemData> stlBillItemDatas;
-        Workbook wb = null;
         try {
             try {
                 stlBillItemDatas = stlBillItemDataDAO.query(
@@ -436,7 +435,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
             // 2. 根据账单模板生成账单excel文件(文件名：ERR_租户ID_结算方ID 政策编码_账期_账单.xlsx)；
 
-            wb = new XSSFWorkbook();
+            Workbook wb = new XSSFWorkbook();
             XSSFSheet sheet0 = (XSSFSheet) wb.createSheet("账单");
             XSSFRow row0 = sheet0.createRow(0);// 第一行
             XSSFCell cell = row0.createCell(0);
@@ -721,6 +720,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             importLog.setState(SmcConstant.StlImportLog.State.DATA_SUCCESS);
             importLog.setStateDesc("数据处理完成");
             importLogDAO.update(JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT), importLog);
+
+            wb.close();
         } catch (IOException e) {
             throw new SystemException(e);
         } catch (SftpException e) {
@@ -730,11 +731,6 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         } catch (Exception e) {
             throw new SystemException(e);
         } finally {
-            try {
-                wb.close();
-            } catch (IOException e) {
-                LOG.error("WorkBook关闭失败", e);
-            }
         }
     }
 
