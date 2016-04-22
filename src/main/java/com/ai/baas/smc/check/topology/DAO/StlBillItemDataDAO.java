@@ -9,7 +9,8 @@ import com.ai.baas.smc.check.topology.vo.StlBillItemData;
 import com.ai.baas.storm.jdbc.JdbcTemplate;
 
 public class StlBillItemDataDAO {
-    public List<StlBillItemData> query(Connection conn, String yyyyMm, StlBillItemData stlBillItemData) {
+    public List<StlBillItemData> query(Connection conn, String yyyyMm,
+            StlBillItemData stlBillItemData) {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("  BILL_ITEM_ID        ,billItemId             ");
         sqlBuilder.append("  BILL_ID             ,billId                 ");
@@ -29,9 +30,11 @@ public class StlBillItemDataDAO {
         sqlBuilder.append("  CREATE_TIME         ,createTime             ");
         sqlBuilder.append(" from stl_bill_item_data_").append(yyyyMm);
         if (stlBillItemData != null) {
-            sqlBuilder.append(" where tenant_id = ").append(stlBillItemData.getTenantId());
+            sqlBuilder.append(" where tenant_id = '").append(stlBillItemData.getTenantId())
+                    .append("'");
             if (null != stlBillItemData.getBillId() && stlBillItemData.getBillId() != 0) {
-                sqlBuilder.append(" and BILL_ID = ").append(stlBillItemData.getBillId());
+                sqlBuilder.append(" and BILL_ID = ").append(stlBillItemData.getBillId())
+                        .append("'");
             }
         }
 
