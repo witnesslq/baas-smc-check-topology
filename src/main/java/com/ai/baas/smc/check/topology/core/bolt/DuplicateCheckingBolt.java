@@ -26,6 +26,7 @@ import com.ai.baas.storm.jdbc.JdbcProxy;
 import com.ai.baas.storm.message.MappingRule;
 import com.ai.baas.storm.message.MessageParser;
 import com.ai.baas.storm.util.BaseConstants;
+import com.ai.baas.storm.util.HBaseProxy;
 import com.ai.opt.base.exception.BusinessException;
 
 public class DuplicateCheckingBolt extends BaseBasicBolt {
@@ -45,6 +46,7 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
         System.out.println(" ====== DuplicateCheckingBolt.prepare");
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         DuplicateCheckingConfig.getInstance();
+        HBaseProxy.loadResource(stormConf);
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,
                 BaseConstants.JDBC_DEFAULT);
         mappingRules[1] = mappingRules[0];
