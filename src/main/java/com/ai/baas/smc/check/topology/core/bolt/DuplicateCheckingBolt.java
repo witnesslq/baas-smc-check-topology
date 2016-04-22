@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +66,9 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
             data = messageParser.getData();
             data.put(SmcHbaseConstant.ColumnName.TOTAL_FEE, String.valueOf(Long.parseLong(data
                     .get(SmcHbaseConstant.ColumnName.TOTAL_FEE)) * 1000));
+            for (Entry<String, String> entrys : data.entrySet()) {
+                LOG.info("data key:" + entrys.getKey() + " , value:" + entrys.getValue());
+            }
             /* 3.查重 */
             DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
             if (!checking.checkData(data)) {
