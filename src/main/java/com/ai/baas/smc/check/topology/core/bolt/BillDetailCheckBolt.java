@@ -236,15 +236,14 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 3， 根据详单项配置解析本详单数据；(开头已解析)
 
             // 4， 根据本详单的租户、流水号、政策编码、账期获取本系统结算算费结果详单数据
-            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
+            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID
             String rowKey = new StringBuilder().append(tenantId)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billIdSys)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT)
                     .append(SmcConstant.StlBillData.BillFrom.SYS)
-                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderId)
-                    .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
+                    .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderId).toString();
             RowFilter rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
                     rowKey.getBytes()));
             Scan scan = new Scan();
@@ -279,14 +278,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     checkStateDesc = "金额不一致";
                 }
                 // 查询第三方详单
-                // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
+                // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID
                 rowKey = new StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
                         .append(billId3pl).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
                         .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
                         .append(SmcHbaseConstant.ROWKEY_SPLIT)
                         .append(SmcConstant.StlBillData.BillFrom.IMPORT)
-                        .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderId)
-                        .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
+                        .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderId).toString();
                 rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
                         rowKey.getBytes()));
                 scan = new Scan();
@@ -333,13 +331,12 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             }
             // a) 查询本系统结算算费结果详单，查询本系统存在记录，而第三方详单不存在的记录，把
             // 些记录插入差异详单表（stl_bill_detail_diff_data_yyyymm）
-            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
+            // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID
             key = new StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
                     .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT)
-                    .append(SmcConstant.StlBillData.BillFrom.SYS)
-                    .append(SmcHbaseConstant.ROWKEY_SPLIT);
+                    .append(SmcConstant.StlBillData.BillFrom.SYS);
             rowFilter = new RowFilter(CompareOp.EQUAL,
                     new BinaryPrefixComparator(rowKey.getBytes()));
             scan = new Scan();
@@ -356,8 +353,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
                         .append(SmcHbaseConstant.ROWKEY_SPLIT)
                         .append(SmcConstant.StlBillData.BillFrom.IMPORT)
-                        .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderIdTmp)
-                        .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
+                        .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderIdTmp).toString();
                 rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
                         rowKey.getBytes()));
                 scan = new Scan();
