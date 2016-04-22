@@ -283,11 +283,11 @@ public class DataValidationBolt extends BaseBasicBolt {
                 collector.emit(value);
             }
         } catch (BusinessException e) {
-            LOG.error("详单对账bolt出现异常", e);
+            LOG.error("数据校验bolt出现异常", e);
             FailBillHandler.addFailBillMsg(data, SmcConstant.DATA_VALIDATION_BOLT,
                     e.getErrorCode(), e.getErrorMessage());
         } catch (Exception e) {
-            LOG.error("详单对账bolt出现异常", e);
+            LOG.error("数据校验bolt出现异常", e);
             FailBillHandler.addFailBillMsg(data, SmcConstant.DATA_VALIDATION_BOLT,
                     SmcExceptCodeConstant.SYSTEM_EXCEPTION, e.getMessage());
         } finally {

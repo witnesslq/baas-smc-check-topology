@@ -80,11 +80,11 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
             collector.emit(datas);
         } catch (BusinessException e) {
             /* 6.进重单表 */
-            LOG.error("详单对账bolt出现异常", e);
+            LOG.error("查重bolt出现异常", e);
             FailBillHandler.addFailBillMsg(data, SmcConstant.DUPLICATE_CHECK_BOLT,
                     e.getErrorCode(), e.getErrorMessage());
         } catch (Exception e) {
-            LOG.error("详单对账bolt出现异常", e);
+            LOG.error("查重bolt出现异常", e);
             FailBillHandler.addFailBillMsg(data, SmcConstant.DATA_VALIDATION_BOLT,
                     SmcExceptCodeConstant.SYSTEM_EXCEPTION, e.getMessage());
         }
