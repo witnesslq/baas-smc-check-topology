@@ -127,7 +127,7 @@ public class DataValidationBolt extends BaseBasicBolt {
             String tenantId = data.get(BaseConstants.TENANT_ID);
             String batchNo = data.get(SmcHbaseConstant.ColumnName.BATCH_NO);
             String orderId = data.get(SmcHbaseConstant.ColumnName.ORDER_ID);
-            String itemFee = data.get(SmcHbaseConstant.ColumnName.ITEM_FEE);
+            String itemFee = data.get(SmcHbaseConstant.ColumnName.TOTAL_FEE);
             // 查询导入日志
             Map<String, String> params = new TreeMap<String, String>();
             params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);
