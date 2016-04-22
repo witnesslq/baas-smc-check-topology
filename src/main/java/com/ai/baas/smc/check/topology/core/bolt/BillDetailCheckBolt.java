@@ -189,6 +189,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             }
             Map<String, String> importLogMap = results.get(0);// 导入日志map
             String billTimeSn = importLogMap.get(FieldName.BILL_TIME_SN);// 账期
+            LOG.error(" ====== billTimeSn = " + billTimeSn);
             String yyyyMm = StringUtil.restrictLength(billTimeSn, 6);
             String objectId = importLogMap.get(FieldName.OBJECT_ID);// 数据对象
             // 查询第三方账单
