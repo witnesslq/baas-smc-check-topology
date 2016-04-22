@@ -22,13 +22,13 @@ public class SmcCheckGeneralFlow extends BaseFlow {
                 BaseConstants.KAFKA_SPOUT_NAME);
         /* 查重 */
         builder.setBolt(SmcConstant.DUPLICATE_CHECK_BOLT, new DuplicateCheckingBolt(), 1)
-                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
+                .shuffleGrouping(SmcConstant.UNPACKING_BOLT);
         /* 数据校验bolt */
         builder.setBolt(SmcConstant.DATA_VALIDATION_BOLT, new DataValidationBolt(), 1)
-                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
+                .shuffleGrouping(SmcConstant.DUPLICATE_CHECK_BOLT);
         /* 对账bolt */
         builder.setBolt(SmcConstant.BILL_DETAIL_CHECK_BOLT, new BillDetailCheckBolt(), 1)
-                .shuffleGrouping(BaseConstants.KAFKA_SPOUT_NAME);
+                .shuffleGrouping(SmcConstant.DATA_VALIDATION_BOLT);
     }
 
     public static void main(String[] args) {
