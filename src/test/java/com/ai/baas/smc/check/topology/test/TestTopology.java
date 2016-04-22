@@ -18,10 +18,11 @@ import com.ai.paas.ipaas.mcs.interfaces.ICacheClient;
 public class TestTopology {
 
     public static void main(String[] args) {
+
         // 查询导入日志
         Map<String, String> params = new TreeMap<String, String>();
-        params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, "MVNE");
-        params.put(SmcCacheConstant.Dshm.FieldName.BATCH_NO, "20160319002");
+        params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, "tenantId");
+        params.put(SmcCacheConstant.Dshm.FieldName.BATCH_NO, "1234");
         DshmClient dshmClient = new DshmClient();
         ICacheClient calParamCacheClient = CacheFactoryUtil
                 .getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
