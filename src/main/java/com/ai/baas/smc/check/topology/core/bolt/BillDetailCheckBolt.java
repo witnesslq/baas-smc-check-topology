@@ -400,9 +400,11 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     importLogMap, totalRecord);
             // 8， 完成
         } catch (BusinessException e) {
+            LOG.error("详单对账bolt出现异常", e);
             FailBillHandler.addFailBillMsg(data, SmcConstant.BILL_DETAIL_CHECK_BOLT,
                     e.getErrorCode(), e.getErrorMessage());
         } catch (Exception e) {
+            LOG.error("详单对账bolt出现异常", e);
             FailBillHandler.addFailBillMsg(data, SmcConstant.BILL_DETAIL_CHECK_BOLT,
                     SmcExceptCodeConstant.SYSTEM_EXCEPTION, e.getMessage());
         } finally {
