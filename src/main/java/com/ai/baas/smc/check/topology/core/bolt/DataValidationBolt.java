@@ -122,12 +122,14 @@ public class DataValidationBolt extends BaseBasicBolt {
             MessageParser messageParser = null;
             messageParser = MessageParser.parseObject(inputData, mappingRules, outputFields);
             data = messageParser.getData();
+            data.put(SmcHbaseConstant.ColumnName.ITEM_FEE, String.valueOf(Long.parseLong(data
+                    .get(SmcHbaseConstant.ColumnName.ITEM_FEE)) * 1000));
             String line = input.getStringByField(BaseConstants.RECORD_DATA);
             LOG.info("-------------------line==" + line);
             String tenantId = data.get(BaseConstants.TENANT_ID);
             String batchNo = data.get(SmcHbaseConstant.ColumnName.BATCH_NO);
             String orderId = data.get(SmcHbaseConstant.ColumnName.ORDER_ID);
-            String itemFee = data.get(SmcHbaseConstant.ColumnName.TOTAL_FEE);
+            String itemFee = data.get(SmcHbaseConstant.ColumnName.ITEM_FEE);
             // 查询导入日志
             Map<String, String> params = new TreeMap<String, String>();
             params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);
@@ -276,7 +278,9 @@ public class DataValidationBolt extends BaseBasicBolt {
             } else {
                 countKey = "billdata_" + tenantId + "_" + batchNo + "_verify_failure";
             }
-            countCacheClient.incr(countKey);
+            LOG.info("详单校验计数器 key:" + countKey);
+            Long countTmp = countCacheClient.incr(countKey);
+            LOG.info("详单校验计数器 value:" + countTmp);
             // 报文发送到下一环节
             List<Object> value = messageParser.toTupleData();
             if (!CollectionUtil.isEmpty(value)) {

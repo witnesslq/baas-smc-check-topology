@@ -30,7 +30,7 @@ public class StlImportLogDAO {
         }
         builder.append(" where tenant_id = '").append(importLog.getTenantId()).append("'");
         if (importLog.getLogId() != null && importLog.getLogId() != 0) {
-            builder.append(" and log_id = '").append(importLog.getLogId()).append("'");
+            builder.append(" and log_id = ").append(importLog.getLogId());
         }
 
         return JdbcTemplate.update(builder.toString(), conn);

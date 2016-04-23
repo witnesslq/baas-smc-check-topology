@@ -20,11 +20,13 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.RowFilter;
@@ -176,7 +178,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             String totalRecord = data.get(SmcHbaseConstant.ColumnName.TOTAL_RECORD);
             String orderId = data.get(SmcHbaseConstant.ColumnName.ORDER_ID);
             String feeItemId3pl = data.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID);
-            String itemFee3pl = data.get(SmcHbaseConstant.ColumnName.TOTAL_FEE);
+            String itemFee3pl = data.get(SmcHbaseConstant.ColumnName.ITEM_FEE);
             // 查询导入日志
             Map<String, String> params = new TreeMap<String, String>();
             params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);
@@ -244,7 +246,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     .append(SmcHbaseConstant.ROWKEY_SPLIT)
                     .append(SmcConstant.StlBillData.BillFrom.SYS)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderId).toString();
-            RowFilter rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
+            RowFilter rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryComparator(
                     rowKey.getBytes()));
             Scan scan = new Scan();
             scan.setFilter(rowFilter);
@@ -285,8 +287,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         .append(SmcHbaseConstant.ROWKEY_SPLIT)
                         .append(SmcConstant.StlBillData.BillFrom.IMPORT)
                         .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderId).toString();
-                rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
-                        rowKey.getBytes()));
+                rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryComparator(rowKey.getBytes()));
                 scan = new Scan();
                 scan.setFilter(rowFilter);
                 resultScanner = tableBillDetailData.getScanner(scan);
@@ -324,7 +325,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             }
             // 6， 本账单对账次数加1（redis），
             String countKey = "billdata_" + tenantId + "_" + batchNo + "_records";
-            Long countRecord = countCacheClient.incr(countKey);
+            Long countRecord = 10l;
+            // Long countRecord = countCacheClient.incr(countKey);
             // 如果对账次数＝第三方账单详单记录数，则说明第三方详单都已对账完成：
             if (Long.parseLong(totalRecord) != countRecord.longValue()) {
                 return;
@@ -354,8 +356,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         .append(SmcHbaseConstant.ROWKEY_SPLIT)
                         .append(SmcConstant.StlBillData.BillFrom.IMPORT)
                         .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderIdTmp).toString();
-                rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(
-                        rowKey.getBytes()));
+                rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryComparator(rowKey.getBytes()));
                 scan = new Scan();
                 scan.setFilter(rowFilter);
                 ResultScanner resultScannerTmp = tableBillDetailData.getScanner(scan);
@@ -420,14 +421,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         int totalRecord = 0;
         // 1. 根据租户ID、账期月份、账单ID查询账单表及账单科目汇总表，获取账单信息；
         StlBillItemData stlBillItemDataQuery = new StlBillItemData();
-        stlBillItemDataQuery.setTenantId(billData3pl.getTenantId());
-        stlBillItemDataQuery.setBillId(billData3pl.getBillId());
+        stlBillItemDataQuery.setTenantId(tenantId);
+        stlBillItemDataQuery.setBillId(billId3pl);
         List<StlBillItemData> stlBillItemDatas;
         try {
             try {
                 stlBillItemDatas = stlBillItemDataDAO.query(
-                        JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT),
-                        StringUtil.restrictLength(billData3pl.getBillTimeSn(), 6),
+                        JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT), yyyyMm,
                         stlBillItemDataQuery);
             } catch (Exception e) {
                 throw new SystemException(e);
@@ -568,7 +568,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 i++;
                 String cvsFileName = "ERR_" + billData3pl.getTenantId() + "_"
                         + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode() + "_"
-                        + billData3pl.getBillTimeSn() + "_BILL_DETAIL_" + sort + ".cvs";
+                        + billData3pl.getBillTimeSn() + "_BILL_DETAIL_" + sort + ".csv";
 
                 File csvFile = null;
                 BufferedWriter writer = null;
@@ -817,7 +817,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         if (StringUtil.isBlank(data)) {
             return null;
         }
-        return JSONArray.parseObject(data, StlSysParam.class);
+        return JSON.parseArray(data, StlSysParam.class).get(0);
     }
 
     String getSysParamDesc(String tenantId, String typeCode, String paramCode, String columnValue) {

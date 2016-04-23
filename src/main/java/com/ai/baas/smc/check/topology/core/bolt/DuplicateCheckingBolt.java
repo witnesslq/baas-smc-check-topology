@@ -66,8 +66,7 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
             MessageParser messageParser = MessageParser.parseObject(inputData, mappingRules,
                     outputFields);
             data = messageParser.getData();
-            data.put(SmcHbaseConstant.ColumnName.TOTAL_FEE, String.valueOf(Long.parseLong(data
-                    .get(SmcHbaseConstant.ColumnName.TOTAL_FEE)) * 1000));
+            
             /* 3.查重 */
             DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
             if (!checking.checkData(data)) {
