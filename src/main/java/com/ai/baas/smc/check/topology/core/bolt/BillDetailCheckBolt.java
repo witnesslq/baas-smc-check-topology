@@ -433,7 +433,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             }
 
             // 2. 根据账单模板生成账单excel文件(文件名：ERR_租户ID_结算方ID 政策编码_账期_账单.xlsx)；
-
+            LOG.info("开始生成账单文件...");
             Workbook wb = new XSSFWorkbook();
             XSSFSheet sheet0 = (XSSFSheet) wb.createSheet("账单");
             XSSFRow row0 = sheet0.createRow(0);// 第一行
@@ -460,11 +460,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             cell = row2.createCell(0);
             cell.setCellValue("开始时间");
             cell = row2.createCell(1);
-            cell.setCellValue(billData3pl.getBillStartTime());
+            cell.setCellValue(DateUtil.getDateString(billData3pl.getBillStartTime(),
+                    DateUtil.YYYYMMDDHHMMSS));
             cell = row2.createCell(2);
             cell.setCellValue("结束时间");
             cell = row2.createCell(3);
-            cell.setCellValue(billData3pl.getBillEndTime());
+            cell.setCellValue(DateUtil.getDateString(billData3pl.getBillEndTime(),
+                    DateUtil.YYYYMMDDHHMMSS));
 
             XSSFRow row3 = sheet0.createRow(3);// 第四行
             cell = row3.createCell(0);
@@ -506,6 +508,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     + billData3pl.getBillTimeSn() + "_BILL.xlsx";
             String tmpPath = System.getProperty("user.dir") + "/tmp/" + billData3pl.getTenantId()
                     + billData3pl.getBillTimeSn();
+            LOG.info("excelFileName = " + excelFileName);
 
             File file = new File(tmpPath);
             if (!file.exists()) {
