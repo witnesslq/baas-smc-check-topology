@@ -39,7 +39,6 @@ dependencies{
         exclude group: 'org.postgresql', module: 'postgresql'
         exclude group: 'org.apache.commons', module: 'commons-email'
         exclude group: 'org.hibernate', module: 'hibernate-validator'
-//        exclude group: 'com.alibaba', module: 'fastjson'
         exclude group: 'org.jboss.netty', module: 'netty'
     }
     // 不打包依赖

@@ -20,7 +20,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -325,8 +324,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             }
             // 6， 本账单对账次数加1（redis），
             String countKey = "billdata_" + tenantId + "_" + batchNo + "_records";
-            Long countRecord = 10l;
-            // Long countRecord = countCacheClient.incr(countKey);
+            // Long countRecord = 10l;
+            Long countRecord = countCacheClient.incr(countKey);
             // 如果对账次数＝第三方账单详单记录数，则说明第三方详单都已对账完成：
             if (Long.parseLong(totalRecord) != countRecord.longValue()) {
                 return;
@@ -516,7 +515,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             fileOut = new FileOutputStream(tmpPath + "/" + excelFileName);
             wb.write(fileOut);
             // 3. 生成详单文件（文件名：ERR_租户ID_结算方ID 政策编码_账期_详单_序号.cvs)）
-
+            LOG.info("开始生成详单文件...");
             // 取差异详单
             // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
             // 第三方差异详单
@@ -569,7 +568,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 String cvsFileName = "ERR_" + billData3pl.getTenantId() + "_"
                         + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode() + "_"
                         + billData3pl.getBillTimeSn() + "_BILL_DETAIL_" + sort + ".csv";
-
+                LOG.info("cvsFileName = " + cvsFileName);
                 File csvFile = null;
                 BufferedWriter writer = null;
                 csvFile = new File(tmpPath + "/" + cvsFileName);
@@ -623,6 +622,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         hasSys = false;
                         break;
                     }
+                    writer.newLine();
                     NavigableMap<byte[], byte[]> map = rt
                             .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
                     for (StlBillStyleItem billStyleItem : stlBillStyleItems) {
@@ -697,6 +697,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             }
 
             File fileUploadZip = new File(uploadFile);
+            LOG.info("压缩文件开始上传到服务器...");
             sftp.put(new FileInputStream(fileUploadZip), fileUploadZip.getName());
             sftp.disconnect();
             if (session != null) {
@@ -709,6 +710,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     channel.disconnect();
                 }
             }
+            LOG.info("压缩文件上传成功...");
             // 更新导入日志表
             StlImportLog importLog = new StlImportLog();
             importLog.setTenantId(importLogMap.get(SmcCacheConstant.Dshm.FieldName.TENANT_ID));

@@ -122,8 +122,8 @@ public class DataValidationBolt extends BaseBasicBolt {
             MessageParser messageParser = null;
             messageParser = MessageParser.parseObject(inputData, mappingRules, outputFields);
             data = messageParser.getData();
-            data.put(SmcHbaseConstant.ColumnName.ITEM_FEE, String.valueOf(Long.parseLong(data
-                    .get(SmcHbaseConstant.ColumnName.ITEM_FEE)) * 1000));
+            data.put(SmcHbaseConstant.ColumnName.ITEM_FEE, String.valueOf((long) (Float
+                    .parseFloat(data.get(SmcHbaseConstant.ColumnName.ITEM_FEE)) * 1000)));
             String line = input.getStringByField(BaseConstants.RECORD_DATA);
             LOG.info("-------------------line==" + line);
             String tenantId = data.get(BaseConstants.TENANT_ID);
