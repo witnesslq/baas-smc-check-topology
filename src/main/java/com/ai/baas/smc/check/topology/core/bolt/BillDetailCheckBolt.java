@@ -9,7 +9,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -633,7 +632,15 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     NavigableMap<byte[], byte[]> map = rt
                             .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
                     for (StlBillStyleItem billStyleItem : stlBillStyleItems) {
-                        writer.write(new String(map.get(billStyleItem.getItemCode().getBytes())));
+                        String value = "";
+                        if (SmcHbaseConstant.ColumnName.ITEM_FEE
+                                .equals(billStyleItem.getItemCode())) {
+                            value = String.valueOf(Float.parseFloat(new String(map
+                                    .get(billStyleItem.getItemCode().getBytes()))) / 1000);
+                        } else {
+                            value = new String(map.get(billStyleItem.getItemCode().getBytes()));
+                        }
+                        writer.write(value);
                         writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                     }
                     writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE
