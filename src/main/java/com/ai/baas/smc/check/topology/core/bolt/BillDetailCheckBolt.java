@@ -28,8 +28,11 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.poi.hssf.usermodel.HSSFCellStyle;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -439,35 +442,46 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 2. 根据账单模板生成账单excel文件(文件名：ERR_租户ID_结算方ID 政策编码_账期_账单.xlsx)；
             LOG.info("开始生成账单文件...");
             Workbook wb = new XSSFWorkbook();
+
+            XSSFCellStyle cellStyle = (XSSFCellStyle) wb.createCellStyle();
+            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+
             XSSFSheet sheet0 = (XSSFSheet) wb.createSheet("账单");
             XSSFRow row0 = sheet0.createRow(0);// 第一行
             XSSFCell cell = row0.createCell(0);
             cell.setCellValue("结算方");
+            cell.setCellStyle(cellStyle);
             cell = row0.createCell(1);
             cell.setCellValue(billData3pl.getStlElementSn());
             cell = row0.createCell(2);
             cell.setCellValue("批次号");
+            cell.setCellStyle(cellStyle);
             cell = row0.createCell(3);
             cell.setCellValue(billData3pl.getBatchNo());
 
             XSSFRow row1 = sheet0.createRow(1);// 第二行
             cell = row1.createCell(0);
             cell.setCellValue("政策编码");
+            cell.setCellStyle(cellStyle);
             cell = row1.createCell(1);
             cell.setCellValue(billData3pl.getPolicyCode());
             cell = row1.createCell(2);
             cell.setCellValue("账期");
+            cell.setCellStyle(cellStyle);
             cell = row1.createCell(3);
             cell.setCellValue(billData3pl.getBillTimeSn());
 
             XSSFRow row2 = sheet0.createRow(2);// 第三行
             cell = row2.createCell(0);
             cell.setCellValue("开始时间");
+            cell.setCellStyle(cellStyle);
             cell = row2.createCell(1);
             cell.setCellValue(DateUtil.getDateString(billData3pl.getBillStartTime(),
                     DateUtil.DATE_FORMAT));
             cell = row2.createCell(2);
             cell.setCellValue("结束时间");
+            cell.setCellStyle(cellStyle);
             cell = row2.createCell(3);
             cell.setCellValue(DateUtil.getDateString(billData3pl.getBillEndTime(),
                     DateUtil.DATE_FORMAT));
@@ -475,22 +489,28 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             XSSFRow row3 = sheet0.createRow(3);// 第四行
             cell = row3.createCell(0);
             cell.setCellValue("结算金额(元)");
+            cell.setCellStyle(cellStyle);
             cell = row3.createCell(1);
             cell.setCellValue(billData3pl.getOrigFee() / 1000);
             cell = row3.createCell(2);
             cell.setCellValue("差异金额(元)");
+            cell.setCellStyle(cellStyle);
             cell = row3.createCell(3);
             cell.setCellValue(billData3pl.getDiffFee() / 1000);
 
             XSSFRow row5 = sheet0.createRow(5);// 第六行
             cell = row5.createCell(0);
             cell.setCellValue("科目ID");
+            cell.setCellStyle(cellStyle);
             cell = row5.createCell(1);
             cell.setCellValue("科目名称");
+            cell.setCellStyle(cellStyle);
             cell = row5.createCell(2);
             cell.setCellValue("总金额(元)");
+            cell.setCellStyle(cellStyle);
             cell = row5.createCell(3);
             cell.setCellValue("差异金额(元)");
+            cell.setCellStyle(cellStyle);
 
             int i = 6;
             for (StlBillItemData stlBillItemData : stlBillItemDatas) {
