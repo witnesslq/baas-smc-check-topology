@@ -210,6 +210,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             stlBillDataQuery.setPolicyCode(policyCode);
             stlBillDataQuery.setBillTimeSn(billData3pl.getBillTimeSn());
             stlBillDataQuery.setStlElementSn(billData3pl.getStlElementSn());
+            stlBillDataQuery.setBillFrom(SmcConstant.StlBillData.BillFrom.SYS);
             stlBillDatas = stlBillDataDAO.query(
                     JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT), yyyyMm, stlBillDataQuery);
             StlBillData billDataSys = stlBillDatas.get(0);// 本系统账单
@@ -326,6 +327,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             String countKey = "billdata_" + tenantId + "_" + batchNo + "_records";
             // Long countRecord = 10l;
             Long countRecord = countCacheClient.incr(countKey);
+            LOG.info("对账次数累加器key = " + countKey);
+            LOG.info("对账次数累加器value = " + countRecord);
             // 如果对账次数＝第三方账单详单记录数，则说明第三方详单都已对账完成：
             if (Long.parseLong(totalRecord) != countRecord.longValue()) {
                 return;
@@ -338,8 +341,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT)
                     .append(SmcConstant.StlBillData.BillFrom.SYS);
-            rowFilter = new RowFilter(CompareOp.EQUAL,
-                    new BinaryPrefixComparator(rowKey.getBytes()));
+            rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(key.toString()
+                    .getBytes()));
             scan = new Scan();
             scan.setFilter(rowFilter);
             resultScanner = tableBillDetailData.getScanner(scan);
@@ -461,12 +464,12 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             cell.setCellValue("开始时间");
             cell = row2.createCell(1);
             cell.setCellValue(DateUtil.getDateString(billData3pl.getBillStartTime(),
-                    DateUtil.YYYYMMDDHHMMSS));
+                    DateUtil.DATE_FORMAT));
             cell = row2.createCell(2);
             cell.setCellValue("结束时间");
             cell = row2.createCell(3);
             cell.setCellValue(DateUtil.getDateString(billData3pl.getBillEndTime(),
-                    DateUtil.YYYYMMDDHHMMSS));
+                    DateUtil.DATE_FORMAT));
 
             XSSFRow row3 = sheet0.createRow(3);// 第四行
             cell = row3.createCell(0);
@@ -501,6 +504,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 cell.setCellValue(stlBillItemData.getTotalFee() / 1000);
                 cell = rowTmp.createCell(3);
                 cell.setCellValue(stlBillItemData.getDiffFee() / 1000);
+                i++;
             }
 
             String excelFileName = "ERR_" + billData3pl.getTenantId() + "_"
@@ -539,10 +543,10 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                             + yyyyMm));
             ResultScanner resultScanner3pl = tableBillDetailDiffData.getScanner(scan);
-            Iterator<Result> iterator = resultScanner3pl.iterator();
-            if (iterator.hasNext()) {
+            for (Result result : resultScanner3pl) {
                 totalRecord++;
             }
+            resultScanner3pl = tableBillDetailDiffData.getScanner(scan);
             // 本系统差异详单
             rowKey = new StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
                     .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
@@ -557,10 +561,10 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             scan.setFilter(rowFilter);
 
             ResultScanner resultScannerSys = tableBillDetailDiffData.getScanner(scan);
-            iterator = resultScannerSys.iterator();
-            if (iterator.hasNext()) {
+            for (Result result : resultScannerSys) {
                 totalRecord++;
             }
+            resultScannerSys = tableBillDetailDiffData.getScanner(scan);
 
             int sort = 0;
             boolean has3pl = true;
@@ -605,7 +609,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 }
                 writer.write("对账结果");
                 writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write("差异金额");
+                writer.write("差异金额(元)");
                 writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                 writer.write("差异说明");
 
@@ -650,8 +654,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 文件名：ERR_租户ID_结算方ID _政策编码_账期_YYYYMMDDHHMISS.zip
             String targetName = "ERR_" + billData3pl.getTenantId() + "_"
                     + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode() + "_"
-                    + billData3pl.getBillTimeSn() + DateUtil.getDateString(DateUtil.YYYYMMDDHHMMSS)
-                    + ".zip";
+                    + billData3pl.getBillTimeSn() + "_"
+                    + DateUtil.getDateString(DateUtil.YYYYMMDDHHMMSS) + ".zip";
             String pathRes = tmpPath;
             String targetPath = System.getProperty("user.dir") + "/tmpzip/"
                     + billData3pl.getTenantId() + billData3pl.getBillTimeSn();

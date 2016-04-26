@@ -45,7 +45,7 @@ public class HbaseClient {
 //	}
 	
 	public void run(){
-		Connection conn = HBaseProxy.getConnection();
+		Connection conn = HBaseProxyTest.getConnection();
 		StringBuffer str = new StringBuffer();
 		str.append("91919191");
 		//String rowkey = String.valueOf(str.toString());

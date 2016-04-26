@@ -7,15 +7,15 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 
-public class HBaseProxy {
+public class HBaseProxyTest {
 	
 	private static Connection connection;
 	
 	static{
 		Configuration configuration = HBaseConfiguration.create();
 		configuration.set("hbase.zookeeper.property.clientPort", "49181");
-		configuration.set("hbase.zookeeper.quorum", "node0,node1,node2");
-		configuration.set("hbase.master", "node0");
+		configuration.set("hbase.zookeeper.quorum", "10.1.130.84,10.1.130.85,10.1.236.122");
+		configuration.set("hbase.master", "10.1.130.84");
 		try {
 			connection = ConnectionFactory.createConnection(configuration);
 		} catch (IOException e) {

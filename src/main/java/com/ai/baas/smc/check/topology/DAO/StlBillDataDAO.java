@@ -41,6 +41,10 @@ public class StlBillDataDAO {
                 sqlBuilder.append(" and bill_time_sn = '").append(stlBillData.getBillTimeSn())
                         .append("'");
             }
+            if (!StringUtil.isBlank(stlBillData.getStlElementSn())) {
+                sqlBuilder.append(" and STL_ELEMENT_SN = '").append(stlBillData.getStlElementSn())
+                        .append("'");
+            }
         }
 
         return JdbcTemplate.query(sqlBuilder.toString(), conn, new BeanListHandler<>(
