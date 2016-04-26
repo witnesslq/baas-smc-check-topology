@@ -203,6 +203,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             StlBillData billData3pl = stlBillDatas.get(0);// 第三方账单
             String policyCode = billData3pl.getPolicyCode();// 政策编码
             Long billId3pl = billData3pl.getBillId();// 第三方账单ID
+            LOG.info("第三方账单ID billId3pl = " + billId3pl);
             // 1， 根据第三方账单的租户、政策编码、结算账期、结算方加载本系统结算算费结果帐单数据
             stlBillDataQuery = new StlBillData();
             stlBillDataQuery.setTenantId(tenantId);
@@ -214,6 +215,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT), yyyyMm, stlBillDataQuery);
             StlBillData billDataSys = stlBillDatas.get(0);// 本系统账单
             Long billIdSys = billDataSys.getBillId();// 本系统账单ID
+            LOG.info("本系统账单ID billIdSys = " + billIdSys);
             // 查询政策信息
             StringBuilder key = new StringBuilder();
             key.append(tenantId).append(".").append(policyCode);
