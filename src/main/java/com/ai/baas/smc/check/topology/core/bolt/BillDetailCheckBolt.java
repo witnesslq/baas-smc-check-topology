@@ -512,7 +512,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode() + "_"
                     + billData3pl.getBillTimeSn() + "_BILL.xlsx";
             String tmpPath = System.getProperty("user.dir") + "/tmp/" + billData3pl.getTenantId()
-                    + billData3pl.getBillTimeSn();
+                    + billData3pl.getBillTimeSn() + "/"
+                    + DateUtil.getDateString(DateUtil.YYYYMMDDHHMMSS);
             LOG.info("excelFileName = " + excelFileName);
 
             File file = new File(tmpPath);
