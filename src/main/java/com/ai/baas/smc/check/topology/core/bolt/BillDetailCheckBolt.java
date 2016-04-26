@@ -593,14 +593,14 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                 writer.write("总数量");
                 writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write(totalRecord);
+                writer.write(String.valueOf(totalRecord));
                 writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                 writer.write("本文件记录数");
                 writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                 if (i <= totalRecord / 50000) {
-                    writer.write(50000);
+                    writer.write("50000");
                 } else {
-                    writer.write(totalRecord % 50000);
+                    writer.write(String.valueOf(totalRecord % 50000));
                 }
                 writer.newLine();// 第二行
                 for (StlBillStyleItem billStyleItem : stlBillStyleItems) {
