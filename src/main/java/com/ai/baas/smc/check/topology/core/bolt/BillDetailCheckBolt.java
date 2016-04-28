@@ -661,7 +661,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                             value = String.valueOf(Float.parseFloat(new String(map
                                     .get(billStyleItem.getItemCode().getBytes()))) / 1000);
                         } else {
-                            value = new String(map.get(billStyleItem.getItemCode().getBytes()));
+                            value = new String(
+                                    map.get(billStyleItem.getItemCode().getBytes()) == null ? new byte[1]
+                                            : map.get(billStyleItem.getItemCode().getBytes()));
                         }
                         writer.write(value);
                         writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
