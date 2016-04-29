@@ -266,7 +266,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 NavigableMap<byte[], byte[]> billDetailDataSysMap = result
                         .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
                 feeItemIdSys = new String(
-                        billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID.getBytes()));
+                        billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID.getBytes()) == null ? new byte[0]
+                                : billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID
+                                        .getBytes()));
                 itemFeeSys = new String(
                         billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.ITEM_FEE.getBytes()));
 
