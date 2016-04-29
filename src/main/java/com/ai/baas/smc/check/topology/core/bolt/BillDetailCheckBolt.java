@@ -260,7 +260,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             Result result = resultScanner.next();
 
             String feeItemIdSys = null;
-            String itemFeeSys = "0";
+            long itemFeeSys = 0;
 
             if (result != null) {
                 NavigableMap<byte[], byte[]> billDetailDataSysMap = result
@@ -269,19 +269,18 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID.getBytes()) == null ? new byte[0]
                                 : billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID
                                         .getBytes()));
-                itemFeeSys = new String(
-                        billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.ITEM_FEE.getBytes()));
+                itemFeeSys = (long) Double.parseDouble(new String(billDetailDataSysMap
+                        .get(SmcHbaseConstant.ColumnName.ITEM_FEE.getBytes())));
 
             }
             // 5， 如果不存在此流水或此流水对应的科目金额不一致，
             // 向详单差异表中插入此差异详单表（stl_bill_detail_diff_data_yyyymm）
-            if (StringUtil.isBlank(feeItemIdSys) || StringUtil.isBlank(itemFeeSys)
-                    || !feeItemId3pl.equals(feeItemIdSys) || !itemFee3pl.equals(itemFeeSys)) {
+            if (StringUtil.isBlank(feeItemIdSys) || !feeItemId3pl.equals(feeItemIdSys)
+                    || !itemFee3pl.equals(String.valueOf(itemFeeSys))) {
                 String diffFee = itemFee3pl;
                 String checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.NOT_FIND_SYS;
-                if (!StringUtil.isBlank(feeItemIdSys) && !StringUtil.isBlank(itemFeeSys)) {
-                    diffFee = String.valueOf(Long.parseLong(itemFee3pl)
-                            - Long.parseLong(itemFeeSys));
+                if (!StringUtil.isBlank(feeItemIdSys)) {
+                    diffFee = String.valueOf(Long.parseLong(itemFee3pl) - itemFeeSys);
                     checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.DIFF_FEE;
                 }
                 // 查询第三方详单
