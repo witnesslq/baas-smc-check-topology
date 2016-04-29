@@ -276,12 +276,11 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             if (StringUtil.isBlank(feeItemIdSys) || StringUtil.isBlank(itemFeeSys)
                     || !feeItemId3pl.equals(feeItemIdSys) || !itemFee3pl.equals(itemFeeSys)) {
                 String diffFee = itemFee3pl;
-                String checkStateDesc = "无匹配记录";
-                if (!StringUtil.isBlank(feeItemIdSys) && !StringUtil.isBlank(itemFeeSys)
-                        && feeItemId3pl.equals(feeItemIdSys)) {
+                String checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.NOT_FIND_SYS;
+                if (!StringUtil.isBlank(feeItemIdSys) && !StringUtil.isBlank(itemFeeSys)) {
                     diffFee = String.valueOf(Long.parseLong(itemFee3pl)
                             - Long.parseLong(itemFeeSys));
-                    checkStateDesc = "金额不一致";
+                    checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.DIFF_FEE;
                 }
                 // 查询第三方详单
                 // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID
@@ -389,7 +388,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                             SmcConstant.StlBillDetailDiffData.CheckState.DIFF.getBytes());
                     put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                             SmcHbaseConstant.ColumnName.CHECK_STATE_DESC.getBytes(),
-                            "记录缺失".getBytes());
+                            SmcConstant.StlBillDetailDiffData.CheckStateDesc.NOT_FIND_3PL
+                                    .getBytes());
                     Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
                             TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                                     + yyyyMm));

@@ -100,7 +100,8 @@ public class SmcConstant {
             public static final String NO = "0";
         }
     }
-	public static class StlImportLog {
+
+    public static class StlImportLog {
         public static class DataType {
             /**
              * 业务流水
@@ -159,6 +160,7 @@ public class SmcConstant {
             public static final String EXCEPTION = "异常";
         }
     }
+
     public static class StlBillData {
         public static class BillFrom {
             /**
@@ -259,6 +261,23 @@ public class SmcConstant {
              * 不一致
              */
             public static final String DIFF = "2";
+        }
+
+        public static class CheckStateDesc {
+            /**
+             * 本系统无匹配记录
+             */
+            public static final String NOT_FIND_SYS = "本系统无匹配记录";
+
+            /**
+             * 第三方记录缺失
+             */
+            public static final String NOT_FIND_3PL = "第三方记录缺失";
+
+            /**
+             * 金额不一致
+             */
+            public static final String DIFF_FEE = "金额不一致";
         }
     }
 }
