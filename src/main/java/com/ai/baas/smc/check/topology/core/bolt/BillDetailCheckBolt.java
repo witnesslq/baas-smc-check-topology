@@ -377,6 +377,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                             .getBytes()));
                     rowKey = new String(map.get(SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY
                             .getBytes()));
+                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表rowKey为：" + rowKey);
                     Put put = new Put(rowKey.getBytes());
                     while (true) {
                         Entry<byte[], byte[]> entry = map.pollFirstEntry();
@@ -398,8 +399,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
                             TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                                     + yyyyMm));
-                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表key为：" + key);
-                    
+                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表值为：" + put);
                     tableBillDetailDiffData.put(put);
                 }
             }
