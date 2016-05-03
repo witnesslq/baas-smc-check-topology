@@ -389,8 +389,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     // .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
                     //
                     // BIU_GZT20160301118_BIU-GZT_44120319740704051X莫文昌
-                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表rowKey为：" + sysErrorKey);
-                    Put put = new Put(sysErrorKey.getBytes());
+                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表rowKey为：" + rowKey);
+                    Put put = new Put(rowKey.getBytes());
                     while (true) {
                         Entry<byte[], byte[]> entry = map.pollFirstEntry();
                         if (entry == null) {
