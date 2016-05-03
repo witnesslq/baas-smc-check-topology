@@ -375,10 +375,22 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     LOG.info("@@@@@@@@@@@@@@@@@@开始插入差异表");
                     String itemFeeTmp = new String(map.get(SmcHbaseConstant.ColumnName.ITEM_FEE
                             .getBytes()));
-                    rowKey = new String(map.get(SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY
-                            .getBytes()));
-                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表rowKey为：" + rowKey);
-                    Put put = new Put(rowKey.getBytes());
+                    // rowKey = new String(map.get(SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY
+                    // .getBytes()));
+                    //
+                    String sysErrorKey = key.append(SmcHbaseConstant.ROWKEY_SPLIT)
+                            .append(orderIdTmp).toString();
+                    // rowKey = new
+                    // StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    // .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
+                    // .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
+                    // .append(SmcHbaseConstant.ROWKEY_SPLIT)
+                    // .append(SmcConstant.StlBillData.BillFrom.SYS)
+                    // .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
+                    //
+                    // BIU_GZT20160301118_BIU-GZT_44120319740704051X莫文昌
+                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表rowKey为：" + sysErrorKey);
+                    Put put = new Put(sysErrorKey.getBytes());
                     while (true) {
                         Entry<byte[], byte[]> entry = map.pollFirstEntry();
                         if (entry == null) {
