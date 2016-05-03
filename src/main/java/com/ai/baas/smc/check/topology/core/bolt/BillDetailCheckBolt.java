@@ -345,6 +345,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
                     .append(SmcHbaseConstant.ROWKEY_SPLIT)
                     .append(SmcConstant.StlBillData.BillFrom.SYS);
+            LOG.info("@@@@@@@@@@@@@@@sys的key值为 = " + key);
             rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryPrefixComparator(key.toString()
                     .getBytes()));
             scan = new Scan();
@@ -362,13 +363,16 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         .append(SmcHbaseConstant.ROWKEY_SPLIT)
                         .append(SmcConstant.StlBillData.BillFrom.IMPORT)
                         .append(SmcHbaseConstant.ROWKEY_SPLIT).append(orderIdTmp).toString();
+                LOG.info("@@@@@@@@@@@@@@@3pl的key值为 = " + rowKey);
                 rowFilter = new RowFilter(CompareOp.EQUAL, new BinaryComparator(rowKey.getBytes()));
                 scan = new Scan();
                 scan.setFilter(rowFilter);
                 ResultScanner resultScannerTmp = tableBillDetailData.getScanner(scan);
                 Result result3pl = resultScannerTmp.next();
+                LOG.info("@@@@@@@@@@@@@@@@@@result3pl = " + result3pl);
                 if (result3pl == null) {
                     // 插入差异表
+                    LOG.info("@@@@@@@@@@@@@@@@@@开始插入差异表");
                     String itemFeeTmp = new String(map.get(SmcHbaseConstant.ColumnName.ITEM_FEE
                             .getBytes()));
                     rowKey = new String(map.get(SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY
@@ -394,6 +398,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
                             TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                                     + yyyyMm));
+                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表key为：" + key);
+                    
                     tableBillDetailDiffData.put(put);
                 }
             }
