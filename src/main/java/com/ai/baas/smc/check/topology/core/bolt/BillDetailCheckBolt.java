@@ -691,9 +691,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                             map.get(SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes()));
                     String checkState = "";
                     if (checkStateNum.equals("1")) {
-                        checkState = "通过";
-                    } else if (checkStateNum.equals("0")) {
-                        checkState = "未通过";
+                        checkState = "一致";
+                    } else if (checkStateNum.equals("2")) {
+                        checkState = "不一致";
                     } else {
                         checkState = "结果错误";
                     }
