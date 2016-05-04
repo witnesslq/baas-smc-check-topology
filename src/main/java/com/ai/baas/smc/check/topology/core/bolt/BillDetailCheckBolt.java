@@ -687,8 +687,22 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         writer.write(value);
                         writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                     }
-                    writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE
-                            .getBytes())));
+                    String checkStateNum = new String(
+                            map.get(SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes()));
+                    String checkState = "";
+                    if (checkStateNum.equals("1")) {
+                        checkState = "通过";
+                    } else if (checkStateNum.equals("0")) {
+                        checkState = "未通过";
+                    } else {
+                        checkState = "结果错误";
+                    }
+                    System.out.println("########################"
+                            + new String(
+                                    map.get(SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes())));
+                    // writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE
+                    // .getBytes())));
+                    writer.write(checkState);
                     writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
                     String diffFee = new String(map.get(SmcHbaseConstant.ColumnName.DIFF_FEE
                             .getBytes()));
