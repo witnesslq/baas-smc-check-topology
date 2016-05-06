@@ -27,7 +27,7 @@ public class SmcCheckGeneralFlow extends BaseFlow {
         builder.setBolt(SmcConstant.DATA_VALIDATION_BOLT, new DataValidationBolt(), 1)
                 .shuffleGrouping(SmcConstant.DUPLICATE_CHECK_BOLT);
         /* 对账bolt */
-        builder.setBolt(SmcConstant.BILL_DETAIL_CHECK_BOLT, new BillDetailCheckBolt(), 1)
+        builder.setBolt(SmcConstant.BILL_DETAIL_CHECK_BOLT, new BillDetailCheckBolt(), 3)
                 .shuffleGrouping(SmcConstant.DATA_VALIDATION_BOLT);
     }
 

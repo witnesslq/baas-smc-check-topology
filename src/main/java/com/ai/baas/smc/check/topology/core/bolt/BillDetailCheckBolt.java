@@ -698,9 +698,6 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     } else {
                         checkState = "结果错误";
                     }
-                    System.out.println("########################"
-                            + new String(
-                                    map.get(SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes())));
                     // writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE
                     // .getBytes())));
                     writer.write(checkState);
