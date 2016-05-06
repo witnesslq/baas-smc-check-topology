@@ -350,6 +350,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     .getBytes()));
             scan = new Scan();
             scan.setFilter(rowFilter);
+            scan.setCaching(500);
             resultScanner = tableBillDetailData.getScanner(scan);
             for (Result resultTmp : resultScanner) {
                 NavigableMap<byte[], byte[]> map = resultTmp
