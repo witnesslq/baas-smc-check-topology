@@ -30,9 +30,9 @@ dependencies{
     compile 'org.apache.poi:poi-ooxml-schemas:3.13'
     compile 'org.apache.storm:storm-kafka:0.9.6'
 
-    compile 'com.ai.baas:baas-dshm-sdk:1.0.7-SNAPSHOT'
+    compile 'com.ai.baas:baas-dshm-sdk:2.0-SNAPSHOT'
     compile 'com.ai.baas.storm:baas-storm:0.1.2-SNAPSHOT'
-    compile ('com.ai.opt.sdk:opt-sdk:1.0.6-SNAPSHOT'){
+    compile ('com.ai.opt.sdk:opt-sdk:2.0-SNAPSHOT'){
         exclude group: 'org.springframework', module: 'spring-context'
         exclude group: 'org.springframework', module: 'spring-context'
         exclude group: 'com.alibaba', module: 'dubbox'
