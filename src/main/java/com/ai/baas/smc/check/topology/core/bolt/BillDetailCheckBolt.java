@@ -46,7 +46,6 @@ import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 
-import com.ai.baas.dshm.client.CacheFactoryUtil;
 import com.ai.baas.dshm.client.impl.CacheBLMapper;
 import com.ai.baas.dshm.client.impl.DshmClient;
 import com.ai.baas.dshm.client.interfaces.IDshmClient;
@@ -75,7 +74,8 @@ import com.ai.baas.storm.util.BaseConstants;
 import com.ai.baas.storm.util.HBaseProxy;
 import com.ai.opt.base.exception.BusinessException;
 import com.ai.opt.base.exception.SystemException;
-import com.ai.opt.sdk.cache.factory.CacheClientFactory;
+import com.ai.opt.sdk.components.base.ComponentConfigLoader;
+import com.ai.opt.sdk.components.mcs.MCSClientFactory;
 import com.ai.opt.sdk.util.CollectionUtil;
 import com.ai.opt.sdk.util.DateUtil;
 import com.ai.opt.sdk.util.StringUtil;
@@ -128,22 +128,29 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         super.prepare(stormConf, context);
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         if (policyCacheClient == null) {
-            policyCacheClient = CacheClientFactory
+            policyCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.POLICY_CACHE);
         }
         if (billStyleCacheClient == null) {
-            billStyleCacheClient = CacheClientFactory
+            billStyleCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
         }
         if (calParamCacheClient == null) {
-            calParamCacheClient = CacheFactoryUtil.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
+            Properties p = new Properties();
+            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_URL,
+                    "http://10.1.245.4:19811/service-portal-uac-web/service/auth");
+            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_PID, "87EA5A771D9647F1B5EBB600812E3067");
+            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEID, "CCS008");
+            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEPASSWORD, "123456");
+            ComponentConfigLoader.loadPaaSConf(p);
+            calParamCacheClient = MCSClientFactory.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
         }
         if (countCacheClient == null) {
-            countCacheClient = CacheClientFactory
+            countCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.CHECK_COUNT_CACHE);
         }
         if (sysParamCacheClient == null) {
-            sysParamCacheClient = CacheClientFactory
+            sysParamCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE);
         }
         if (dshmClient == null) {

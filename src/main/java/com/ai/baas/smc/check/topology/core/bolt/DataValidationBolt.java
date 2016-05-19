@@ -42,7 +42,7 @@ import com.ai.baas.storm.util.BaseConstants;
 import com.ai.baas.storm.util.HBaseProxy;
 import com.ai.opt.base.exception.BusinessException;
 import com.ai.opt.base.exception.SystemException;
-import com.ai.opt.sdk.cache.factory.CacheClientFactory;
+import com.ai.opt.sdk.components.mcs.MCSClientFactory;
 import com.ai.opt.sdk.util.CollectionUtil;
 import com.ai.opt.sdk.util.DateUtil;
 import com.ai.opt.sdk.util.StringUtil;
@@ -83,18 +83,18 @@ public class DataValidationBolt extends BaseBasicBolt {
         super.prepare(stormConf, context);
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         if (billStyleCacheClient == null) {
-            billStyleCacheClient = CacheClientFactory
+            billStyleCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
         }
         if (elementCacheClient == null) {
-            elementCacheClient = CacheClientFactory
+            elementCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.ELEMENT_CACHE);
         }
         if (calParamCacheClient == null) {
             calParamCacheClient = CacheFactoryUtil.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
         }
         if (countCacheClient == null) {
-            countCacheClient = CacheClientFactory
+            countCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.CHECK_COUNT_CACHE);
         }
         /* 初始化hbase */
