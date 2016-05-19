@@ -60,6 +60,7 @@ import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.TypeCode;
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
+import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant.FamilyName;
 import com.ai.baas.smc.check.topology.vo.StlBillData;
 import com.ai.baas.smc.check.topology.vo.StlBillItemData;
 import com.ai.baas.smc.check.topology.vo.StlBillStyleItem;
@@ -261,9 +262,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
             String feeItemIdSys = null;
             long itemFeeSys = 0;
-
+            NavigableMap<byte[], byte[]> billDetailDataSysMap = null;
             if (result != null) {
-                NavigableMap<byte[], byte[]> billDetailDataSysMap = result
+                 billDetailDataSysMap = result
                         .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
                 feeItemIdSys = new String(
                         billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID.getBytes()) == null ? new byte[0]
@@ -325,6 +326,16 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
                         TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                                 + yyyyMm));
+                //若两方的详单都存在，将本系统特有的字段拷贝到差异表
+                if(billDetailDataSysMap!=null){
+                    for(Entry<byte[], byte[]> entry:  billDetailDataSysMap.entrySet()){
+                        if(!put.has(FamilyName.COLUMN_DEF.getBytes(), entry.getKey())){
+                            put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
+                                    entry.getKey(), entry.getValue());
+                        }
+                    }
+                }
+                
                 tableBillDetailDiffData.put(put);
             }
             // 6， 本账单对账次数加1（redis），
