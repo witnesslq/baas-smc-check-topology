@@ -66,6 +66,8 @@ import com.ai.baas.smc.check.topology.vo.StlBillStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlImportLog;
 import com.ai.baas.smc.check.topology.vo.StlPolicy;
 import com.ai.baas.smc.check.topology.vo.StlSysParam;
+import com.ai.baas.storm.duplicate.DuplicateCheckingConfig;
+import com.ai.baas.storm.duplicate.DuplicateCheckingFromHBase;
 import com.ai.baas.storm.failbill.FailBillHandler;
 import com.ai.baas.storm.jdbc.JdbcProxy;
 import com.ai.baas.storm.message.MappingRule;
@@ -170,6 +172,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         if (importLogDAO == null) {
             importLogDAO = new StlImportLogDAO();
         }
+        
+        DuplicateCheckingConfig.getInstance();
     }
 
     @Override
@@ -230,7 +234,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 查询政策信息
             StringBuilder key = new StringBuilder();
             key.append(tenantId).append(".").append(policyCode);
-            String policyStr = policyCacheClient.get(key.toString());
+            String policyStr = policyCacheClient.hget(SmcCacheConstant.NameSpace.POLICY_CACHE,key.toString());
             if (StringUtil.isBlank(policyStr)) {
                 throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "政策["
                         + policyCode + "]不存在");
@@ -241,7 +245,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             keyStringBuilder.append(tenantId).append(SmcCacheConstant.CACHE_KEY_SPLIT)
                     .append(stlPolicy.getBillStyleSn()).append(SmcCacheConstant.CACHE_KEY_SPLIT)
                     .append(SmcCacheConstant.BILL_DETAIL_ITEM);
-            String cacheStr = billStyleCacheClient.get(keyStringBuilder.toString());
+            String cacheStr = billStyleCacheClient.hget(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE,keyStringBuilder.toString());
             if (StringUtil.isBlank(cacheStr)) {
                 throw new SystemException("账单样式编码[" + stlPolicy.getBillStyleSn() + "]详单项配置不存在");
             }
@@ -344,6 +348,12 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 }
                 
                 tableBillDetailDiffData.put(put);
+            }
+            
+            /* 查重 */
+            DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
+            if (!checking.checkData(data)) {
+                throw new BusinessException(SmcExceptCodeConstant.FAIL_CODE_DUP, "重复流水");
             }
             // 6， 本账单对账次数加1（redis），
             String countKey = "billdata_" + tenantId + "_" + batchNo + "_records";
@@ -887,7 +897,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         key.append(typeCode);
         key.append(".");
         key.append(paramCode);
-        String data = sysParamCacheClient.get(key.toString());
+        String data = sysParamCacheClient.hget(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE,key.toString());
         if (StringUtil.isBlank(data)) {
             return null;
         }
@@ -903,7 +913,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         key.append(paramCode);
         key.append(".");
         key.append(columnValue);
-        String data = sysParamCacheClient.get(key.toString());
+        String data = sysParamCacheClient.hget(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE,key.toString());
         if (StringUtil.isBlank(data)) {
             return null;
         }

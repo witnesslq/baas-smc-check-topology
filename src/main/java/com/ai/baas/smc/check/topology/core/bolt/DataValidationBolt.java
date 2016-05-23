@@ -156,7 +156,7 @@ public class DataValidationBolt extends BaseBasicBolt {
             String policyCode = billData3pl.getPolicyCode();// 政策编码
             Long billId3pl = billData3pl.getBillId();// 第三方账单ID
             // 根据政策编码获取账单格式定义
-            String policyStr = billStyleCacheClient.get(tenantId + "." + policyCode);
+            String policyStr = billStyleCacheClient.hget(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE,tenantId + "." + policyCode);
             if (StringUtil.isBlank(policyStr)) {
                 throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "政策编码["
                         + policyCode + "]定义不存在");
@@ -164,7 +164,7 @@ public class DataValidationBolt extends BaseBasicBolt {
             StlPolicy stlPolicy = JSON.parseObject(policyStr, StlPolicy.class);
             String billStyleSn = stlPolicy.getBillStyleSn();
             /* 获取此账单格式定义下的所有的详单项定义； */
-            String billDetailStyleStr = billStyleCacheClient.get(tenantId + "." + billStyleSn + "."
+            String billDetailStyleStr = billStyleCacheClient.hget(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE,tenantId + "." + billStyleSn + "."
                     + SmcCacheConstant.BILL_DETAIL_ITEM);
             if (StringUtil.isBlank(billDetailStyleStr)) {
                 throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "账单样式编码["
@@ -181,7 +181,7 @@ public class DataValidationBolt extends BaseBasicBolt {
                     Long elementId = stlBillDetailStyleItem.getElementId();
                     String key = new StringBuilder().append(stlBillDetailStyleItem.getTenantId())
                             .append(SmcCacheConstant.CACHE_KEY_SPLIT).append(elementId).toString();
-                    String elementStr = elementCacheClient.get(key.toString());
+                    String elementStr = elementCacheClient.hget(SmcCacheConstant.NameSpace.ELEMENT_CACHE,key.toString());
                     if (StringUtil.isBlank(elementStr)) {
                         throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION,
                                 "元素ID[" + elementId + "]不存在");
