@@ -3,7 +3,7 @@ package com.ai.baas.smc.check.topology.constants;
 public class SmcConstant {
     public final static String CHARSET_UTF8 = "utf-8";
 
-    public final static String CHARSET_GBK = "gbk";
+    public final static String CHARSET_GBK2312 = "gbk2312";
 
     public static final String FIELD_SPLIT = new String(new char[] { (char) 1 });
 

@@ -645,7 +645,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 }
                 csvFile.createNewFile();
                 writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile),
-                        SmcConstant.CHARSET_GBK));
+                        SmcConstant.CHARSET_GBK2312));
                 // 写入文件头部
                 writer.write("批次号");
                 writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
