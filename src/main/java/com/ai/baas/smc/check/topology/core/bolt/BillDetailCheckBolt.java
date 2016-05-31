@@ -76,7 +76,6 @@ import com.ai.baas.storm.util.BaseConstants;
 import com.ai.baas.storm.util.HBaseProxy;
 import com.ai.opt.base.exception.BusinessException;
 import com.ai.opt.base.exception.SystemException;
-import com.ai.opt.sdk.components.base.ComponentConfigLoader;
 import com.ai.opt.sdk.components.mcs.MCSClientFactory;
 import com.ai.opt.sdk.util.CollectionUtil;
 import com.ai.opt.sdk.util.DateUtil;
@@ -138,13 +137,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
         }
         if (calParamCacheClient == null) {
-            Properties p = new Properties();
-            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_URL,
-                    "http://10.1.245.4:19811/service-portal-uac-web/service/auth");
-            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_PID, "87EA5A771D9647F1B5EBB600812E3067");
-            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEID, "CCS008");
-            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEPASSWORD, "123456");
-            ComponentConfigLoader.loadPaaSConf(p);
+//            Properties p = new Properties();
+//            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_URL,
+//                    "http://10.1.245.4:19811/service-portal-uac-web/service/auth");
+//            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_PID, "87EA5A771D9647F1B5EBB600812E3067");
+//            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEID, "CCS008");
+//            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEPASSWORD, "123456");
+//            ComponentConfigLoader.loadPaaSConf(p);
             calParamCacheClient = MCSClientFactory.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
         }
         if (countCacheClient == null) {
