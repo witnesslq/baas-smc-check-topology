@@ -1,42 +1,23 @@
 package com.ai.baas.smc.check.topology.test;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-
-import com.ai.baas.smc.check.topology.constants.SmcConstant;
+import com.ai.opt.sdk.components.mcs.MCSClientFactory;
+import com.ai.paas.ipaas.mcs.CacheFactory;
+import com.ai.paas.ipaas.mcs.interfaces.ICacheClient;
+import com.ai.paas.ipaas.uac.vo.AuthDescriptor;
 
 public class Test {
 
-    public static void main(String[] args) throws IOException {
-        String cvsFileName = "ERR_test.csv";
-        File csvFile = null;
-        BufferedWriter writer = null;
-        String tmpPath = "e:/test";
-        csvFile = new File(tmpPath + "/" + cvsFileName);
-        File parent = csvFile.getParentFile();
-        if (parent != null && !parent.exists()) {
-            parent.mkdirs();
+    public static void main(String[] args) throws Exception {
+        AuthDescriptor authDescriptor = new AuthDescriptor(
+                "http://10.1.245.4:19811/service-portal-uac-web/service/auth",
+                "87EA5A771D9647F1B5EBB600812E3067", "123456", "MCS001");
+        ICacheClient client = CacheFactory.getClient(authDescriptor);
+        ICacheClient calParamCacheClient = MCSClientFactory
+                .getCacheClient("com.ai.runner.center.dshm.cache.calparam");
+        if (calParamCacheClient == null) {
+            System.out.println("null");
         }
-        csvFile.createNewFile();
-        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile),
-                "gb2312"));
-        // 写入文件头部
-        writer.write("批次号");
-        writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-        writer.write("batch_no");
-        writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-        writer.write("总数量");
-        writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-        writer.write(String.valueOf(3));
-        writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-        writer.write("本文件记录数");
-        writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-        writer.flush();
-        writer.close();
-        System.out.println("ok");
+        System.out.println(0);
     }
 
 }
