@@ -23,6 +23,8 @@ public class StlBillDetailStyleItem {
 
     private Integer sortId;
 
+    private String isSplitItem;
+
     private String createDeptId;
 
     private String createOperId;
@@ -113,6 +115,14 @@ public class StlBillDetailStyleItem {
 
     public void setSortId(Integer sortId) {
         this.sortId = sortId;
+    }
+
+    public String getIsSplitItem() {
+        return isSplitItem;
+    }
+
+    public void setIsSplitItem(String isSplitItem) {
+        this.isSplitItem = isSplitItem == null ? null : isSplitItem.trim();
     }
 
     public String getCreateDeptId() {

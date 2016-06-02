@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import backtype.storm.tuple.Tuple;
 
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
-import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
 import com.ai.baas.storm.duplicate.DuplicateCheckingConfig;
 import com.ai.baas.storm.duplicate.DuplicateCheckingFromHBase;
 import com.ai.baas.storm.failbill.FailBillHandler;
@@ -66,7 +64,7 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
             MessageParser messageParser = MessageParser.parseObject(inputData, mappingRules,
                     outputFields);
             data = messageParser.getData();
-            
+
             /* 3.查重 */
             DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
             if (!checking.checkData(data)) {

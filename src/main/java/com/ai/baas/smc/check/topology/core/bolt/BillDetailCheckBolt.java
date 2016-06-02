@@ -1,14 +1,14 @@
 package com.ai.baas.smc.check.topology.core.bolt;
 
 import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -57,12 +57,13 @@ import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.Dshm.FieldName;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.ParamCode;
 import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.TypeCode;
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
+import com.ai.baas.smc.check.topology.constants.SmcConstant.StlBillDetailStyleItem.IsSplitItem;
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant.FamilyName;
 import com.ai.baas.smc.check.topology.vo.StlBillData;
+import com.ai.baas.smc.check.topology.vo.StlBillDetailStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlBillItemData;
-import com.ai.baas.smc.check.topology.vo.StlBillStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlImportLog;
 import com.ai.baas.smc.check.topology.vo.StlPolicy;
 import com.ai.baas.smc.check.topology.vo.StlSysParam;
@@ -102,27 +103,29 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     private static final long serialVersionUID = -3214008757998306486L;
 
-    private ICacheClient policyCacheClient;
+    private static final String noSplitKsy = "_no_split_";
 
-    private ICacheClient billStyleCacheClient;
+    private transient ICacheClient policyCacheClient;
 
-    private ICacheClient calParamCacheClient;
+    private transient ICacheClient billStyleCacheClient;
 
-    private ICacheClient countCacheClient;
+    private transient ICacheClient calParamCacheClient;
 
-    private ICacheClient sysParamCacheClient;
+    private transient ICacheClient countCacheClient;
 
-    private IDshmClient dshmClient;
+    private transient ICacheClient sysParamCacheClient;
+
+    private transient IDshmClient dshmClient;
 
     private String[] outputFields = new String[] { "data" };
 
     private MappingRule[] mappingRules = new MappingRule[2];
 
-    private StlBillDataDAO stlBillDataDAO;
+    private transient StlBillDataDAO stlBillDataDAO;
 
-    private StlBillItemDataDAO stlBillItemDataDAO;
+    private transient StlBillItemDataDAO stlBillItemDataDAO;
 
-    private StlImportLogDAO importLogDAO;
+    private transient StlImportLogDAO importLogDAO;
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
@@ -137,13 +140,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
         }
         if (calParamCacheClient == null) {
-//            Properties p = new Properties();
-//            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_URL,
-//                    "http://10.1.245.4:19811/service-portal-uac-web/service/auth");
-//            p.setProperty(SmcConstant.Dshm.PAAS_AUTH_PID, "87EA5A771D9647F1B5EBB600812E3067");
-//            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEID, "CCS008");
-//            p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEPASSWORD, "123456");
-//            ComponentConfigLoader.loadPaaSConf(p);
+            // Properties p = new Properties();
+            // p.setProperty(SmcConstant.Dshm.PAAS_AUTH_URL,
+            // "http://10.1.245.4:19811/service-portal-uac-web/service/auth");
+            // p.setProperty(SmcConstant.Dshm.PAAS_AUTH_PID, "87EA5A771D9647F1B5EBB600812E3067");
+            // p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEID, "CCS008");
+            // p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEPASSWORD, "123456");
+            // ComponentConfigLoader.loadPaaSConf(p);
             calParamCacheClient = MCSClientFactory.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
         }
         if (countCacheClient == null) {
@@ -171,7 +174,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         if (importLogDAO == null) {
             importLogDAO = new StlImportLogDAO();
         }
-        
+
         DuplicateCheckingConfig.getInstance();
     }
 
@@ -233,7 +236,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 查询政策信息
             StringBuilder key = new StringBuilder();
             key.append(tenantId).append(".").append(policyCode);
-            String policyStr = policyCacheClient.hget(SmcCacheConstant.NameSpace.POLICY_CACHE,key.toString());
+            String policyStr = policyCacheClient.hget(SmcCacheConstant.NameSpace.POLICY_CACHE,
+                    key.toString());
             if (StringUtil.isBlank(policyStr)) {
                 throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "政策["
                         + policyCode + "]不存在");
@@ -244,12 +248,13 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             keyStringBuilder.append(tenantId).append(SmcCacheConstant.CACHE_KEY_SPLIT)
                     .append(stlPolicy.getBillStyleSn()).append(SmcCacheConstant.CACHE_KEY_SPLIT)
                     .append(SmcCacheConstant.BILL_DETAIL_ITEM);
-            String cacheStr = billStyleCacheClient.hget(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE,keyStringBuilder.toString());
+            String cacheStr = billStyleCacheClient.hget(
+                    SmcCacheConstant.NameSpace.BILL_STYLE_CACHE, keyStringBuilder.toString());
             if (StringUtil.isBlank(cacheStr)) {
                 throw new SystemException("账单样式编码[" + stlPolicy.getBillStyleSn() + "]详单项配置不存在");
             }
-            List<StlBillStyleItem> stlBillStyleItems = JSON.parseArray(cacheStr,
-                    StlBillStyleItem.class);
+            List<StlBillDetailStyleItem> billDetailStyleItems = JSON.parseArray(cacheStr,
+                    StlBillDetailStyleItem.class);
             // 3， 根据详单项配置解析本详单数据；(开头已解析)
 
             // 4， 根据本详单的租户、流水号、政策编码、账期获取本系统结算算费结果详单数据
@@ -274,8 +279,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             long itemFeeSys = 0;
             NavigableMap<byte[], byte[]> billDetailDataSysMap = null;
             if (result != null) {
-                 billDetailDataSysMap = result
-                        .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
+                billDetailDataSysMap = result.getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF
+                        .getBytes());
                 feeItemIdSys = new String(
                         billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID.getBytes()) == null ? new byte[0]
                                 : billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID
@@ -336,19 +341,19 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 Table tableBillDetailDiffData = HBaseProxy.getConnection().getTable(
                         TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                                 + yyyyMm));
-                //若两方的详单都存在，将本系统特有的字段拷贝到差异表
-                if(billDetailDataSysMap!=null){
-                    for(Entry<byte[], byte[]> entry:  billDetailDataSysMap.entrySet()){
-                        if(!put.has(FamilyName.COLUMN_DEF.getBytes(), entry.getKey())){
+                // 若两方的详单都存在，将本系统特有的字段拷贝到差异表
+                if (billDetailDataSysMap != null) {
+                    for (Entry<byte[], byte[]> entry : billDetailDataSysMap.entrySet()) {
+                        if (!put.has(FamilyName.COLUMN_DEF.getBytes(), entry.getKey())) {
                             put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                                     entry.getKey(), entry.getValue());
                         }
                     }
                 }
-                
+
                 tableBillDetailDiffData.put(put);
             }
-            
+
             /* 查重 */
             DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
             if (!checking.checkData(data)) {
@@ -403,11 +408,6 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     LOG.info("@@@@@@@@@@@@@@@@@@开始插入差异表");
                     String itemFeeTmp = new String(map.get(SmcHbaseConstant.ColumnName.ITEM_FEE
                             .getBytes()));
-                    // rowKey = new String(map.get(SmcHbaseConstant.ColumnName.STL_ORDER_DATA_KEY
-                    // .getBytes()));
-                    //
-                    String sysErrorKey = key.append(SmcHbaseConstant.ROWKEY_SPLIT)
-                            .append(orderIdTmp).toString();
                     // rowKey = new
                     // StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
                     // .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
@@ -446,9 +446,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // b) 修改账单数据表（第三方账单和本系统结算算费结果帐单）中的对账结果（差异金额为0则沉淀状态为账单一致，否则沉淀状态为有差异）。
             // 7， 如果对账结果为有差异，则调用对账错误详单文件生成方法，生成错误详单文件，并向账详单处理结果文件清单表新增记录。
             // 生成文件
-            createFile(billData3pl, billDataSys, objectId, batchNo, stlBillStyleItems,
+            createFile(billData3pl, billDataSys, objectId, batchNo, billDetailStyleItems,
                     importLogMap, totalRecord);
-            // 8， 完成
         } catch (BusinessException e) {
             LOG.error("详单对账bolt出现异常", e);
             FailBillHandler.addFailBillMsg(data, SmcConstant.BILL_DETAIL_CHECK_BOLT,
@@ -464,7 +463,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
     }
 
     private void createFile(StlBillData billData3pl, StlBillData billDataSys, String objectId,
-            String batchNo, List<StlBillStyleItem> stlBillStyleItems,
+            String batchNo, List<StlBillDetailStyleItem> billDetailStyleItems,
             Map<String, String> importLogMap, String totalRecordDetail) {
         String tenantId = billData3pl.getTenantId();
         Long billId3pl = billData3pl.getBillId();
@@ -590,8 +589,11 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             FileOutputStream fileOut = null;
             fileOut = new FileOutputStream(tmpPath + "/" + excelFileName);
             wb.write(fileOut);
+            wb.close();
             // 3. 生成详单文件（文件名：ERR_租户ID_结算方ID 政策编码_账期_详单_序号.cvs)）
             LOG.info("开始生成详单文件...");
+            // 判断是否需要拆分详单文件
+            String splitItemCode = this.getAplitItemCode(billDetailStyleItems);
             // 取差异详单
             // KEY:租户ID_账单ID_账期ID_数据对象_账单来源_流水ID_主键ID
             // 第三方差异详单
@@ -612,10 +614,6 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     TableName.valueOf(SmcHbaseConstant.TableName.STL_BILL_DETAIL_DIFF_DATA_
                             + yyyyMm));
             ResultScanner resultScanner3pl = tableBillDetailDiffData.getScanner(scan);
-            for (Result result : resultScanner3pl) {
-                totalRecord++;
-            }
-            resultScanner3pl = tableBillDetailDiffData.getScanner(scan);
             // 本系统差异详单
             rowKey = new StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
                     .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
@@ -630,116 +628,184 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             scan.setFilter(rowFilter);
 
             ResultScanner resultScannerSys = tableBillDetailDiffData.getScanner(scan);
-            for (Result result : resultScannerSys) {
-                totalRecord++;
-            }
-            resultScannerSys = tableBillDetailDiffData.getScanner(scan);
-
-            int sort = 0;
-            boolean has3pl = true;
-            boolean hasSys = true;
-
-            while (has3pl || hasSys) {
-                i++;
-                String cvsFileName = "ERR_" + billData3pl.getTenantId() + "_"
-                        + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode() + "_"
-                        + billData3pl.getBillTimeSn() + "_BILL_DETAIL_" + sort + ".csv";
-                LOG.info("cvsFileName = " + cvsFileName);
-                File csvFile = null;
-                BufferedWriter writer = null;
-                csvFile = new File(tmpPath + "/" + cvsFileName);
-                File parent = csvFile.getParentFile();
-                if (parent != null && !parent.exists()) {
-                    parent.mkdirs();
-                }
-                csvFile.createNewFile();
-                writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile),
-                        SmcConstant.CHARSET_GBK2312));
-                // 写入文件头部
-                writer.write("批次号");
-                writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write(batchNo);
-                writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write("总数量");
-                writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write(String.valueOf(totalRecord));
-                writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write("本文件记录数");
-                writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                if (i <= totalRecord / 50000) {
-                    writer.write("50000");
-                } else {
-                    writer.write(String.valueOf(totalRecord % 50000));
-                }
-                writer.newLine();// 第二行
-                for (StlBillStyleItem billStyleItem : stlBillStyleItems) {
-                    writer.write(billStyleItem.getItemTitle());
-                    writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                }
-                writer.write("对账结果");
-                writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write("差异金额(元)");
-                writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                writer.write("差异说明");
-
-                int count = 0;// 当前文件条数
-                while (count < 50001) {
-                    Result rt;
-                    if (has3pl) {
-                        rt = resultScanner3pl.next();
-                        if (rt == null) {
-                            has3pl = false;
-                            rt = resultScannerSys.next();
-                        }
-                    } else {
-                        rt = resultScannerSys.next();
-                    }
-                    if (rt == null) {
-                        hasSys = false;
-                        break;
-                    }
-                    writer.newLine();
-                    NavigableMap<byte[], byte[]> map = rt
+            // 保存所有的差异记录
+            Map<String, List<NavigableMap<byte[], byte[]>>> totalMap = new HashMap<String, List<NavigableMap<byte[], byte[]>>>();
+            // 不拆分文件
+            if (StringUtil.isBlank(splitItemCode)) {
+                for (Result result : resultScanner3pl) {
+                    totalRecord++;
+                    NavigableMap<byte[], byte[]> navigableMap = result
                             .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
-                    for (StlBillStyleItem billStyleItem : stlBillStyleItems) {
-                        String value = "";
-                        if (SmcHbaseConstant.ColumnName.ITEM_FEE
-                                .equals(billStyleItem.getItemCode())) {
-                            value = String.valueOf(Float.parseFloat(new String(map
-                                    .get(billStyleItem.getItemCode().getBytes()))) / 1000);
-                        } else {
-                            value = new String(
-                                    map.get(billStyleItem.getItemCode().getBytes()) == null ? new byte[1]
-                                            : map.get(billStyleItem.getItemCode().getBytes()));
-                        }
-                        writer.write(value);
-                        writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                    }
-                    String checkStateNum = new String(
-                            map.get(SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes()));
-                    String checkState = "";
-                    if (checkStateNum.equals("1")) {
-                        checkState = "一致";
-                    } else if (checkStateNum.equals("2")) {
-                        checkState = "不一致";
-                    } else {
-                        checkState = "结果错误";
-                    }
-                    // writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE
-                    // .getBytes())));
-                    writer.write(checkState);
-                    writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                    String diffFee = new String(map.get(SmcHbaseConstant.ColumnName.DIFF_FEE
-                            .getBytes()));
-
-                    writer.write(String.valueOf(Float.parseFloat(diffFee) / 1000));
-                    writer.write(SmcConstant.CVSFILE_FEILD_SPLIT);
-                    writer.write(new String(map.get(SmcHbaseConstant.ColumnName.CHECK_STATE_DESC
-                            .getBytes())));
+                    List<NavigableMap<byte[], byte[]>> list = new ArrayList<NavigableMap<byte[], byte[]>>();
+                    list.add(navigableMap);
+                    totalMap.put(noSplitKsy, list);
                 }
-                writer.flush();
-                writer.close();
+                for (Result result : resultScannerSys) {
+                    totalRecord++;
+                    NavigableMap<byte[], byte[]> navigableMap = result
+                            .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
+                    if (totalMap.containsKey(noSplitKsy)) {
+                        List<NavigableMap<byte[], byte[]>> list = totalMap.get(noSplitKsy);
+                        list.add(navigableMap);
+                    } else {
+                        List<NavigableMap<byte[], byte[]>> list = new ArrayList<NavigableMap<byte[], byte[]>>();
+                        list.add(navigableMap);
+                        totalMap.put(noSplitKsy, list);
+                    }
+                }
+            } else {// 拆分文件
+
+                for (Result result : resultScanner3pl) {
+                    totalRecord++;
+                    NavigableMap<byte[], byte[]> navigableMap = result
+                            .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
+                    String splitKey;
+                    if (navigableMap.containsKey(splitItemCode)
+                            && navigableMap.get(splitItemCode) != null) {
+                        splitKey = new String(navigableMap.get(splitItemCode));
+                    } else {
+                        splitKey = "null";
+                    }
+                    if (totalMap.containsKey(splitKey)) {
+                        List<NavigableMap<byte[], byte[]>> list = totalMap.get(splitKey);
+                        list.add(navigableMap);
+                    } else {
+                        List<NavigableMap<byte[], byte[]>> list = new ArrayList<NavigableMap<byte[], byte[]>>();
+                        list.add(navigableMap);
+                        totalMap.put(splitKey, list);
+                    }
+                }
+                for (Result result : resultScannerSys) {
+                    totalRecord++;
+                    NavigableMap<byte[], byte[]> navigableMap = result
+                            .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
+                    String splitKey;
+                    if (navigableMap.containsKey(splitItemCode)
+                            && navigableMap.get(splitItemCode) != null) {
+                        splitKey = new String(navigableMap.get(splitItemCode));
+                    } else {
+                        splitKey = "null";
+                    }
+                    if (totalMap.containsKey(splitKey)) {
+                        List<NavigableMap<byte[], byte[]>> list = totalMap.get(splitKey);
+                        list.add(navigableMap);
+                    } else {
+                        List<NavigableMap<byte[], byte[]>> list = new ArrayList<NavigableMap<byte[], byte[]>>();
+                        list.add(navigableMap);
+                        totalMap.put(splitKey, list);
+                    }
+                }
+
             }
+            for (Entry<String, List<NavigableMap<byte[], byte[]>>> entry : totalMap.entrySet()) {
+                int sort = 0;
+                String splitKey = entry.getKey();
+                if (noSplitKsy.equals(splitKey)) {
+                    splitKey = "";
+                }
+                List<NavigableMap<byte[], byte[]>> navigableMaps = entry.getValue();
+                boolean hasNext = true;
+                while (hasNext) {
+                    sort++;
+
+                    wb = new XSSFWorkbook();
+
+                    cellStyle = (XSSFCellStyle) wb.createCellStyle();
+                    cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+                    cellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+
+                    sheet0 = (XSSFSheet) wb.createSheet("详单");
+                    row0 = sheet0.createRow(0);// 第一行
+                    cell = row0.createCell(0);
+                    cell.setCellValue("批次号");
+                    cell.setCellStyle(cellStyle);
+                    cell = row0.createCell(1);
+                    cell.setCellValue(batchNo);
+                    cell = row0.createCell(2);
+                    cell.setCellValue("总数量");
+                    cell = row0.createCell(3);
+                    cell.setCellValue(totalRecord);
+                    cell = row0.createCell(4);
+                    cell.setCellValue("本文件记录数");
+                    cell = row0.createCell(5);
+                    if (sort <= navigableMaps.size() / 50000) {
+                        cell.setCellValue("50000");
+                    } else {
+                        cell.setCellValue(String.valueOf(navigableMaps.size() % 50000));
+                    }
+                    row1 = sheet0.createRow(1);// 第二行
+                    i = 0;
+                    for (StlBillDetailStyleItem billStyleItem : billDetailStyleItems) {
+                        cell = row1.createCell(i++);
+                        cell.setCellValue(billStyleItem.getItemTitle());
+                    }
+                    cell = row1.createCell(i++);
+                    cell.setCellValue("对账结果");
+                    cell = row1.createCell(i++);
+                    cell.setCellValue("差异金额(元)");
+                    cell = row1.createCell(i++);
+                    cell.setCellValue("差异说明");
+
+                    int count = 0;// 当前文件条数
+                    while (count < 50000) {
+                        if (((sort - 1) * 50000 + count) >= navigableMaps.size()) {
+                            hasNext = false;
+                            break;
+                        }
+                        NavigableMap<byte[], byte[]> map = navigableMaps.get((sort - 1) * 50000
+                                + count);
+                        i = 0;
+                        for (StlBillDetailStyleItem billStyleItem : billDetailStyleItems) {
+                            String value = "";
+                            if (SmcHbaseConstant.ColumnName.ITEM_FEE.equals(billStyleItem
+                                    .getItemCode())) {
+                                value = String.valueOf(Float.parseFloat(new String(map
+                                        .get(billStyleItem.getItemCode().getBytes()))) / 1000);
+                            } else {
+                                value = new String(
+                                        map.get(billStyleItem.getItemCode().getBytes()) == null ? new byte[1]
+                                                : map.get(billStyleItem.getItemCode().getBytes()));
+                            }
+                            cell = row1.createCell(i++);
+                            cell.setCellValue(value);
+                        }
+                        String checkStateNum = new String(
+                                map.get(SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes()));
+                        String checkState = "";
+                        if (checkStateNum.equals("1")) {
+                            checkState = "一致";
+                        } else if (checkStateNum.equals("2")) {
+                            checkState = "不一致";
+                        } else {
+                            checkState = "结果错误";
+                        }
+                        cell = row1.createCell(i++);
+                        cell.setCellValue(checkState);
+                        String diffFee = new String(map.get(SmcHbaseConstant.ColumnName.DIFF_FEE
+                                .getBytes()));
+
+                        cell = row1.createCell(i++);
+                        cell.setCellValue(String.valueOf(Float.parseFloat(diffFee) / 1000));
+                        cell = row1.createCell(i++);
+                        cell.setCellValue(new String(map
+                                .get(SmcHbaseConstant.ColumnName.CHECK_STATE_DESC.getBytes())));
+                    }
+                    String detailFileName = "ERR_" + billData3pl.getTenantId() + "_"
+                            + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode()
+                            + "_" + billData3pl.getBillTimeSn() + "_BILL_DETAIL_" + splitKey + "_"
+                            + sort + ".xlsx";
+                    LOG.info("detailFileName = " + detailFileName);
+                    file = new File(tmpPath);
+                    if (!file.exists()) {
+                        file.mkdirs();
+                    }
+                    fileOut = null;
+                    fileOut = new FileOutputStream(tmpPath + "/" + detailFileName);
+                    wb.write(fileOut);
+                    wb.close();
+                }
+            }
+
             // 生成zip文件
             // 文件名：ERR_租户ID_结算方ID _政策编码_账期_YYYYMMDDHHMISS.zip
             String targetName = "ERR_" + billData3pl.getTenantId() + "_"
@@ -820,7 +886,6 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             importLog.setStateDesc("数据处理完成");
             importLogDAO.update(JdbcProxy.getConnection(BaseConstants.JDBC_DEFAULT), importLog);
 
-            wb.close();
         } catch (IOException e) {
             throw new SystemException(e);
         } catch (SftpException e) {
@@ -831,6 +896,15 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             throw new SystemException(e);
         } finally {
         }
+    }
+
+    private String getAplitItemCode(List<StlBillDetailStyleItem> billDetailStyleItems) {
+        for (StlBillDetailStyleItem billDetailStyleItem : billDetailStyleItems) {
+            if (IsSplitItem.YES.equals(billDetailStyleItem.getIsSplitItem())) {
+                return billDetailStyleItem.getItemCode();
+            }
+        }
+        return "";
     }
 
     private static void makeDir(String directory, ChannelSftp sftp) throws SftpException {
@@ -896,7 +970,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         key.append(typeCode);
         key.append(".");
         key.append(paramCode);
-        String data = sysParamCacheClient.hget(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE,key.toString());
+        String data = sysParamCacheClient.hget(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE,
+                key.toString());
         if (StringUtil.isBlank(data)) {
             return null;
         }
@@ -912,7 +987,8 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         key.append(paramCode);
         key.append(".");
         key.append(columnValue);
-        String data = sysParamCacheClient.hget(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE,key.toString());
+        String data = sysParamCacheClient.hget(SmcCacheConstant.NameSpace.SYS_PARAM_CACHE,
+                key.toString());
         if (StringUtil.isBlank(data)) {
             return null;
         }

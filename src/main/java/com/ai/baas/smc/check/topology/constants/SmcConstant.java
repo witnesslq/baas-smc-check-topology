@@ -297,4 +297,12 @@ public class SmcConstant {
             public static final String DIFF_FEE = "金额不一致";
         }
     }
+
+    public static class StlBillDetailStyleItem {
+        public static class IsSplitItem {
+            public static final String YES = "YES";
+
+            public static final String NO = "NO";
+        }
+    }
 }
