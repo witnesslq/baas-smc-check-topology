@@ -127,8 +127,10 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     private transient StlImportLogDAO importLogDAO;
 
+    @SuppressWarnings("unchecked")
     @Override
-    public void prepare(Map stormConf, TopologyContext context) {
+    public void prepare(@SuppressWarnings("rawtypes")
+    Map stormConf, TopologyContext context) {
         super.prepare(stormConf, context);
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         if (policyCacheClient == null) {
@@ -584,7 +586,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
             File file = new File(tmpPath);
             if (!file.exists()) {
-                file.mkdirs();
+                if (file.mkdirs()) {
+
+                }
             }
             FileOutputStream fileOut = null;
             fileOut = new FileOutputStream(tmpPath + "/" + excelFileName);

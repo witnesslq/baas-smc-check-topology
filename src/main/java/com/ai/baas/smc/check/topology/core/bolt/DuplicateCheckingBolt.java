@@ -39,6 +39,7 @@ public class DuplicateCheckingBolt extends BaseBasicBolt {
     public DuplicateCheckingBolt() {
     }
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
         System.out.println(" ====== DuplicateCheckingBolt.prepare");

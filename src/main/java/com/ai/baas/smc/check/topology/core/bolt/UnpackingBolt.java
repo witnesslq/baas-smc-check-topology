@@ -38,8 +38,10 @@ public class UnpackingBolt extends BaseBasicBolt {
 
     private String[] outputFields = new String[] { "data" };
 
+    @SuppressWarnings("unchecked")
     @Override
-    public void prepare(Map stormConf, TopologyContext context) {
+    public void prepare(@SuppressWarnings("rawtypes")
+    Map stormConf, TopologyContext context) {
         LOG.info(" ====== UnpackingBolt.prepare");
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,

@@ -69,6 +69,8 @@ public class DataValidationBolt extends BaseBasicBolt {
 
     private ICacheClient countCacheClient;
 
+    private ICacheClient policyClient;
+
     private MappingRule[] mappingRules = new MappingRule[2];
 
     private String[] outputFields = new String[] { "data" };
@@ -77,8 +79,10 @@ public class DataValidationBolt extends BaseBasicBolt {
 
     private StlBillDataDAO stlBillDataDAO;
 
+    @SuppressWarnings("unchecked")
     @Override
-    public void prepare(Map stormConf, TopologyContext context) {
+    public void prepare(@SuppressWarnings("rawtypes")
+    Map stormConf, TopologyContext context) {
         LOG.info("数据校验bolt[prepare方法]...");
         super.prepare(stormConf, context);
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
@@ -96,6 +100,9 @@ public class DataValidationBolt extends BaseBasicBolt {
         if (countCacheClient == null) {
             countCacheClient = MCSClientFactory
                     .getCacheClient(SmcCacheConstant.NameSpace.CHECK_COUNT_CACHE);
+        }
+        if (policyClient == null) {
+            policyClient = MCSClientFactory.getCacheClient(SmcCacheConstant.NameSpace.POLICY_CACHE);
         }
         /* 初始化hbase */
         HBaseProxy.loadResource(stormConf);
@@ -156,7 +163,8 @@ public class DataValidationBolt extends BaseBasicBolt {
             String policyCode = billData3pl.getPolicyCode();// 政策编码
             Long billId3pl = billData3pl.getBillId();// 第三方账单ID
             // 根据政策编码获取账单格式定义
-            String policyStr = billStyleCacheClient.hget(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE,tenantId + "." + policyCode);
+            String policyStr = policyClient.hget(SmcCacheConstant.NameSpace.POLICY_CACHE, tenantId
+                    + "." + policyCode);
             if (StringUtil.isBlank(policyStr)) {
                 throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "政策编码["
                         + policyCode + "]定义不存在");
@@ -164,8 +172,9 @@ public class DataValidationBolt extends BaseBasicBolt {
             StlPolicy stlPolicy = JSON.parseObject(policyStr, StlPolicy.class);
             String billStyleSn = stlPolicy.getBillStyleSn();
             /* 获取此账单格式定义下的所有的详单项定义； */
-            String billDetailStyleStr = billStyleCacheClient.hget(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE,tenantId + "." + billStyleSn + "."
-                    + SmcCacheConstant.BILL_DETAIL_ITEM);
+            String billDetailStyleStr = billStyleCacheClient.hget(
+                    SmcCacheConstant.NameSpace.BILL_STYLE_CACHE, tenantId + "." + billStyleSn + "."
+                            + SmcCacheConstant.BILL_DETAIL_ITEM);
             if (StringUtil.isBlank(billDetailStyleStr)) {
                 throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION, "账单样式编码["
                         + billStyleSn + "]详单项定义不存在");
@@ -181,7 +190,8 @@ public class DataValidationBolt extends BaseBasicBolt {
                     Long elementId = stlBillDetailStyleItem.getElementId();
                     String key = new StringBuilder().append(stlBillDetailStyleItem.getTenantId())
                             .append(SmcCacheConstant.CACHE_KEY_SPLIT).append(elementId).toString();
-                    String elementStr = elementCacheClient.hget(SmcCacheConstant.NameSpace.ELEMENT_CACHE,key.toString());
+                    String elementStr = elementCacheClient.hget(
+                            SmcCacheConstant.NameSpace.ELEMENT_CACHE, key.toString());
                     if (StringUtil.isBlank(elementStr)) {
                         throw new BusinessException(SmcExceptCodeConstant.BUSINESS_EXCEPTION,
                                 "元素ID[" + elementId + "]不存在");
