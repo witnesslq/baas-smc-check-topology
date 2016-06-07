@@ -359,7 +359,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             /* 查重 */
             DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
             if (!checking.checkData(data)) {
-                throw new BusinessException(SmcExceptCodeConstant.FAIL_CODE_DUP, "重复流水");
+                 throw new BusinessException(SmcExceptCodeConstant.FAIL_CODE_DUP, "重复流水");
             }
             // 6， 本账单对账次数加1（redis），
             String countKey = "billdata_" + tenantId + "_" + batchNo + "_records";
@@ -369,7 +369,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             LOG.info("对账次数累加器value = " + countRecord);
             // 如果对账次数＝第三方账单详单记录数，则说明第三方详单都已对账完成：
             if (Long.parseLong(totalRecord) != countRecord.longValue()) {
-                return;
+                 return;
             }
             // a) 查询本系统结算算费结果详单，查询本系统存在记录，而第三方详单不存在的记录，把
             // 些记录插入差异详单表（stl_bill_detail_diff_data_yyyymm）
@@ -664,9 +664,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     NavigableMap<byte[], byte[]> navigableMap = result
                             .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
                     String splitKey;
-                    if (navigableMap.containsKey(splitItemCode)
-                            && navigableMap.get(splitItemCode) != null) {
-                        splitKey = new String(navigableMap.get(splitItemCode));
+                    if (navigableMap.containsKey(splitItemCode.getBytes())
+                            && navigableMap.get(splitItemCode.getBytes()) != null) {
+                        splitKey = new String(navigableMap.get(splitItemCode.getBytes()));
                     } else {
                         splitKey = "null";
                     }
@@ -684,9 +684,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     NavigableMap<byte[], byte[]> navigableMap = result
                             .getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes());
                     String splitKey;
-                    if (navigableMap.containsKey(splitItemCode)
-                            && navigableMap.get(splitItemCode) != null) {
-                        splitKey = new String(navigableMap.get(splitItemCode));
+                    if (navigableMap.containsKey(splitItemCode.getBytes())
+                            && navigableMap.get(splitItemCode.getBytes()) != null) {
+                        splitKey = new String(navigableMap.get(splitItemCode.getBytes()));
                     } else {
                         splitKey = "null";
                     }
@@ -701,6 +701,23 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 }
 
             }
+            // 拆分字段翻译
+            if (!StringUtil.isBlank(splitItemCode)) {
+                Map<String, List<NavigableMap<byte[], byte[]>>> totalMapTmp = new HashMap<String, List<NavigableMap<byte[], byte[]>>>();
+                for (Entry<String, List<NavigableMap<byte[], byte[]>>> entry : totalMap.entrySet()) {
+                    String splitName = getSysParamDesc(tenantId, TypeCode.BILL_DETAIL_STYLE_ITEM,
+                            ParamCode.SPLIT_ITEM_VALUE, entry.getKey());
+                    if (totalMapTmp.containsKey(splitName)) {
+                        List<NavigableMap<byte[], byte[]>> list = totalMapTmp.get(splitName);
+                        list.addAll(entry.getValue());
+                        totalMapTmp.put(splitName, list);
+                    } else {
+                        totalMapTmp.put(splitName, entry.getValue());
+                    }
+                }
+                totalMap = totalMapTmp;
+            }
+
             for (Entry<String, List<NavigableMap<byte[], byte[]>>> entry : totalMap.entrySet()) {
                 int sort = 0;
                 String splitKey = entry.getKey();
@@ -756,6 +773,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                             hasNext = false;
                             break;
                         }
+                        XSSFRow row = sheet0.createRow(count + 2);
                         NavigableMap<byte[], byte[]> map = navigableMaps.get((sort - 1) * 50000
                                 + count);
                         i = 0;
@@ -770,7 +788,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                                         map.get(billStyleItem.getItemCode().getBytes()) == null ? new byte[1]
                                                 : map.get(billStyleItem.getItemCode().getBytes()));
                             }
-                            cell = row1.createCell(i++);
+                            cell = row.createCell(i++);
                             cell.setCellValue(value);
                         }
                         String checkStateNum = new String(
@@ -783,16 +801,17 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         } else {
                             checkState = "结果错误";
                         }
-                        cell = row1.createCell(i++);
+                        cell = row.createCell(i++);
                         cell.setCellValue(checkState);
                         String diffFee = new String(map.get(SmcHbaseConstant.ColumnName.DIFF_FEE
                                 .getBytes()));
 
-                        cell = row1.createCell(i++);
+                        cell = row.createCell(i++);
                         cell.setCellValue(String.valueOf(Float.parseFloat(diffFee) / 1000));
-                        cell = row1.createCell(i++);
+                        cell = row.createCell(i++);
                         cell.setCellValue(new String(map
                                 .get(SmcHbaseConstant.ColumnName.CHECK_STATE_DESC.getBytes())));
+                        count++;
                     }
                     String detailFileName = "ERR_" + billData3pl.getTenantId() + "_"
                             + billData3pl.getStlElementSn() + "_" + billData3pl.getPolicyCode()
@@ -1001,7 +1020,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
 
     String getSysParamDesc(String tenantId, String typeCode, String paramCode, String columnValue) {
         StlSysParam sysParam = getSysParam(tenantId, typeCode, paramCode, columnValue);
-        return sysParam == null ? "" : sysParam.getColumnDesc();
+        return sysParam == null ? columnValue : sysParam.getColumnDesc();
     }
 
     @Override

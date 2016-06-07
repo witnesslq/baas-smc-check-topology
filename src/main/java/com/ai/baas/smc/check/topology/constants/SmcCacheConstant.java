@@ -29,6 +29,8 @@ public final class SmcCacheConstant {
 
         public static final String DATA_COLLECT = "data_collect";
 
+        public static final String BILL_DETAIL_STYLE_ITEM = "BILL_DETAIL_STYLE_ITEM";
+
     }
 
     public static final class ParamCode {
@@ -49,6 +51,8 @@ public final class SmcCacheConstant {
         public static final String URL = "url";
 
         public static final String UPLOAD_URL_DIFF_FILE = "upload_url_diff_file";
+
+        public static final String SPLIT_ITEM_VALUE = "SPLIT_ITEM_VALUE";
     }
 
     public static final class NameSpace {

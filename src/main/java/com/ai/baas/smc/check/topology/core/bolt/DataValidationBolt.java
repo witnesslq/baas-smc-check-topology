@@ -188,6 +188,9 @@ public class DataValidationBolt extends BaseBasicBolt {
                 for (int i = 0; i < stlBillDetailStyleItems.size(); i++) {
                     StlBillDetailStyleItem stlBillDetailStyleItem = stlBillDetailStyleItems.get(i);
                     Long elementId = stlBillDetailStyleItem.getElementId();
+                    if (elementId == null || elementId == 0) {
+                        continue;
+                    }
                     String key = new StringBuilder().append(stlBillDetailStyleItem.getTenantId())
                             .append(SmcCacheConstant.CACHE_KEY_SPLIT).append(elementId).toString();
                     String elementStr = elementCacheClient.hget(
