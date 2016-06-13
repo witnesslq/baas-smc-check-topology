@@ -16,6 +16,7 @@ import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 
+import com.ai.baas.smc.check.topology.util.LoadConfUtil;
 import com.ai.baas.storm.jdbc.JdbcProxy;
 import com.ai.baas.storm.message.MappingRule;
 import com.ai.baas.storm.message.MessageParser;
@@ -43,6 +44,7 @@ public class UnpackingBolt extends BaseBasicBolt {
     public void prepare(@SuppressWarnings("rawtypes")
     Map stormConf, TopologyContext context) {
         LOG.info(" ====== UnpackingBolt.prepare");
+        LoadConfUtil.loadPaasConf(stormConf);
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         mappingRules[0] = MappingRule.getMappingRule(MappingRule.FORMAT_TYPE_OUTPUT,
                 BaseConstants.JDBC_DEFAULT);

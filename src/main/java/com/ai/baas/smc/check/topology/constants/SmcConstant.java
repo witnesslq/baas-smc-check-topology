@@ -21,22 +21,13 @@ public class SmcConstant {
 
     public static final String DUPLICATE_CHECK_BOLT = "duplicate_checking";
 
-    /**
-     * 共享内存参数<br>
-     * Date: 2016年3月17日 <br>
-     * Copyright (c) 2016 asiainfo.com <br>
-     * 
-     * @author wangjl9
-     */
-    public static class Dshm {
-        public static final String PAAS_AUTH_URL = "paas.auth.url";
+    public static final String PAAS_AUTH_URL = "paas.auth.url";
 
-        public static final String PAAS_AUTH_PID = "paas.auth.pid";
+    public static final String PAAS_AUTH_PID = "paas.auth.pid";
 
-        public static final String PAAS_CCS_SERVICEID = "paas.ccs.serviceid";
+    public static final String PAAS_CCS_SERVICEID = "paas.ccs.serviceid";
 
-        public static final String PAAS_CCS_SERVICEPASSWORD = "paas.ccs.servicepassword";
-    }
+    public static final String PAAS_CCS_SERVICEPASSWORD = "paas.ccs.servicepassword";
 
     /**
      * 基础元素表<br>

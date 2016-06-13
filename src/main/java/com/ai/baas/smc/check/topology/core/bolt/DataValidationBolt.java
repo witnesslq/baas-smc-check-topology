@@ -30,6 +30,7 @@ import com.ai.baas.smc.check.topology.constants.SmcCacheConstant.Dshm.FieldName;
 import com.ai.baas.smc.check.topology.constants.SmcConstant;
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
+import com.ai.baas.smc.check.topology.util.LoadConfUtil;
 import com.ai.baas.smc.check.topology.vo.StlBillData;
 import com.ai.baas.smc.check.topology.vo.StlBillDetailStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlElement;
@@ -85,6 +86,7 @@ public class DataValidationBolt extends BaseBasicBolt {
     Map stormConf, TopologyContext context) {
         LOG.info("数据校验bolt[prepare方法]...");
         super.prepare(stormConf, context);
+        LoadConfUtil.loadPaasConf(stormConf);
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         if (billStyleCacheClient == null) {
             billStyleCacheClient = MCSClientFactory

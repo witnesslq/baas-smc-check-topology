@@ -61,6 +61,7 @@ import com.ai.baas.smc.check.topology.constants.SmcConstant.StlBillDetailStyleIt
 import com.ai.baas.smc.check.topology.constants.SmcExceptCodeConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant;
 import com.ai.baas.smc.check.topology.constants.SmcHbaseConstant.FamilyName;
+import com.ai.baas.smc.check.topology.util.LoadConfUtil;
 import com.ai.baas.smc.check.topology.vo.StlBillData;
 import com.ai.baas.smc.check.topology.vo.StlBillDetailStyleItem;
 import com.ai.baas.smc.check.topology.vo.StlBillItemData;
@@ -132,6 +133,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
     public void prepare(@SuppressWarnings("rawtypes")
     Map stormConf, TopologyContext context) {
         super.prepare(stormConf, context);
+        LoadConfUtil.loadPaasConf(stormConf);
         JdbcProxy.loadResources(Arrays.asList(BaseConstants.JDBC_DEFAULT), stormConf);
         if (policyCacheClient == null) {
             policyCacheClient = MCSClientFactory
@@ -142,13 +144,6 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     .getCacheClient(SmcCacheConstant.NameSpace.BILL_STYLE_CACHE);
         }
         if (calParamCacheClient == null) {
-            // Properties p = new Properties();
-            // p.setProperty(SmcConstant.Dshm.PAAS_AUTH_URL,
-            // "http://10.1.245.4:19811/service-portal-uac-web/service/auth");
-            // p.setProperty(SmcConstant.Dshm.PAAS_AUTH_PID, "87EA5A771D9647F1B5EBB600812E3067");
-            // p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEID, "CCS008");
-            // p.setProperty(SmcConstant.Dshm.PAAS_CCS_SERVICEPASSWORD, "123456");
-            // ComponentConfigLoader.loadPaaSConf(p);
             calParamCacheClient = MCSClientFactory.getCacheClient(CacheBLMapper.CACHE_BL_CAL_PARAM);
         }
         if (countCacheClient == null) {
