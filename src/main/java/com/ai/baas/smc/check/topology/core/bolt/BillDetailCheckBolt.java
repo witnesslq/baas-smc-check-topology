@@ -354,7 +354,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             /* 查重 */
             DuplicateCheckingFromHBase checking = new DuplicateCheckingFromHBase();
             if (!checking.checkData(data)) {
-                 throw new BusinessException(SmcExceptCodeConstant.FAIL_CODE_DUP, "重复流水");
+                throw new BusinessException(SmcExceptCodeConstant.FAIL_CODE_DUP, "重复流水");
             }
             // 6， 本账单对账次数加1（redis），
             String countKey = "billdata_" + tenantId + "_" + batchNo + "_records";
@@ -364,7 +364,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             LOG.info("对账次数累加器value = " + countRecord);
             // 如果对账次数＝第三方账单详单记录数，则说明第三方详单都已对账完成：
             if (Long.parseLong(totalRecord) != countRecord.longValue()) {
-                 return;
+                return;
             }
             // a) 查询本系统结算算费结果详单，查询本系统存在记录，而第三方详单不存在的记录，把
             // 些记录插入差异详单表（stl_bill_detail_diff_data_yyyymm）
@@ -405,17 +405,9 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                     LOG.info("@@@@@@@@@@@@@@@@@@开始插入差异表");
                     String itemFeeTmp = new String(map.get(SmcHbaseConstant.ColumnName.ITEM_FEE
                             .getBytes()));
-                    // rowKey = new
-                    // StringBuilder().append(tenantId).append(SmcHbaseConstant.ROWKEY_SPLIT)
-                    // .append(billIdSys).append(SmcHbaseConstant.ROWKEY_SPLIT).append(billTimeSn)
-                    // .append(SmcHbaseConstant.ROWKEY_SPLIT).append(objectId)
-                    // .append(SmcHbaseConstant.ROWKEY_SPLIT)
-                    // .append(SmcConstant.StlBillData.BillFrom.SYS)
-                    // .append(SmcHbaseConstant.ROWKEY_SPLIT).toString();
-                    //
-                    // BIU_GZT20160301118_BIU-GZT_44120319740704051X莫文昌
-                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表rowKey为：" + rowKey);
-                    Put put = new Put(rowKey.getBytes());
+                    String row = new String(resultTmp.getRow());
+                    LOG.info("@@@@@@@@@@@@@@@@@@插入差异表rowKey为：" + row);
+                    Put put = new Put(row.getBytes());
                     while (true) {
                         Entry<byte[], byte[]> entry = map.pollFirstEntry();
                         if (entry == null) {
