@@ -185,6 +185,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             MessageParser messageParser = MessageParser.parseObject(inputData, mappingRules,
                     outputFields);
             data = messageParser.getData();
+            LOG.info("对账bolt格式化数据 data = [" + data + "]");
             String tenantId = data.get(SmcHbaseConstant.ColumnName.TENANT_ID);
             String batchNo = data.get(SmcHbaseConstant.ColumnName.BATCH_NO);
             String totalRecord = data.get(SmcHbaseConstant.ColumnName.TOTAL_RECORD);
