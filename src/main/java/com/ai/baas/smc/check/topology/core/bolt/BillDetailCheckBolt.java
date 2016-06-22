@@ -173,6 +173,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
         }
 
         DuplicateCheckingConfig.getInstance();
+        FailBillHandler.startup();
     }
 
     @Override

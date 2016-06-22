@@ -118,6 +118,7 @@ public class DataValidationBolt extends BaseBasicBolt {
         if (stlBillDataDAO == null) {
             stlBillDataDAO = new StlBillDataDAO();
         }
+        FailBillHandler.startup();
     }
 
     @Override
