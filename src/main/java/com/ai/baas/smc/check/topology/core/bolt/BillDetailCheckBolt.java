@@ -295,7 +295,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                 String diffFee = itemFee3pl;
                 String checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.NOT_FIND_SYS;
                 if (!StringUtil.isBlank(feeItemIdSys)) {
-                    diffFee = String.valueOf(Long.parseLong(itemFee3pl)
+                    diffFee = String.valueOf(Float.parseFloat(itemFee3pl)
                             - Long.parseLong(itemFeeSys));
                     checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.DIFF_FEE;
                 }
