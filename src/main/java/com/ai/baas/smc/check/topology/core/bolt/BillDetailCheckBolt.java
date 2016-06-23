@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -193,7 +192,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             String totalRecord = data.get(SmcHbaseConstant.ColumnName.TOTAL_RECORD);
             String orderId = data.get(SmcHbaseConstant.ColumnName.ORDER_ID);
             String feeItemId3pl = data.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID);
-            long itemFee3pl = Long.parseLong(data.get(SmcHbaseConstant.ColumnName.ITEM_FEE));
+            String itemFee3pl = data.get(SmcHbaseConstant.ColumnName.ITEM_FEE);
             // 查询导入日志
             Map<String, String> params = new TreeMap<String, String>();
             params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);
@@ -276,7 +275,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             Result result = resultScanner.next();
 
             String feeItemIdSys = null;
-            long itemFeeSys = 0;
+            String itemFeeSys = "0";
             NavigableMap<byte[], byte[]> billDetailDataSysMap = null;
             if (result != null) {
                 billDetailDataSysMap = result.getFamilyMap(SmcHbaseConstant.FamilyName.COLUMN_DEF
@@ -285,18 +284,19 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID.getBytes()) == null ? new byte[0]
                                 : billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID
                                         .getBytes()));
-                itemFeeSys = (long) Double.parseDouble(new String(billDetailDataSysMap
-                        .get(SmcHbaseConstant.ColumnName.ITEM_FEE.getBytes())));
+                itemFeeSys = new String(
+                        billDetailDataSysMap.get(SmcHbaseConstant.ColumnName.ITEM_FEE.getBytes()));
 
             }
             // 5， 如果不存在此流水或此流水对应的科目金额不一致，
             // 向详单差异表中插入此差异详单表（stl_bill_detail_diff_data_yyyymm）
             if (StringUtil.isBlank(feeItemIdSys) || !feeItemId3pl.equals(feeItemIdSys)
-                    || itemFee3pl != itemFeeSys) {
-                long diffFee = itemFee3pl;
+                    || (long) Long.parseLong(itemFee3pl) != (long) Long.parseLong(itemFeeSys)) {
+                String diffFee = itemFee3pl;
                 String checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.NOT_FIND_SYS;
                 if (!StringUtil.isBlank(feeItemIdSys)) {
-                    diffFee = itemFee3pl - itemFeeSys;
+                    diffFee = String.valueOf(Long.parseLong(itemFee3pl)
+                            - Long.parseLong(itemFeeSys));
                     checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.DIFF_FEE;
                 }
                 // 查询第三方详单
@@ -331,7 +331,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                             entry.getKey(), entry.getValue());
                 }
                 put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
-                        SmcHbaseConstant.ColumnName.DIFF_FEE.getBytes(), Bytes.toBytes(diffFee));
+                        SmcHbaseConstant.ColumnName.DIFF_FEE.getBytes(), diffFee.getBytes());
                 put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                         SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes(),
                         SmcConstant.StlBillDetailDiffData.CheckState.DIFF.getBytes());
@@ -793,11 +793,11 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                         }
                         cell = row.createCell(i++);
                         cell.setCellValue(checkState);
-                        String diffFee = new String(map.get(SmcHbaseConstant.ColumnName.DIFF_FEE
-                                .getBytes()));
+                        String diffFee = new String((map.get(SmcHbaseConstant.ColumnName.DIFF_FEE
+                                .getBytes())));
 
                         cell = row.createCell(i++);
-                        cell.setCellValue(String.valueOf(Float.parseFloat(diffFee) / 1000));
+                        cell.setCellValue(String.valueOf(Long.parseLong(diffFee) / 1000));
                         cell = row.createCell(i++);
                         cell.setCellValue(new String(map
                                 .get(SmcHbaseConstant.ColumnName.CHECK_STATE_DESC.getBytes())));
