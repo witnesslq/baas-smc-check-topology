@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -192,7 +193,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             String totalRecord = data.get(SmcHbaseConstant.ColumnName.TOTAL_RECORD);
             String orderId = data.get(SmcHbaseConstant.ColumnName.ORDER_ID);
             String feeItemId3pl = data.get(SmcHbaseConstant.ColumnName.FEE_ITEM_ID);
-            String itemFee3pl = data.get(SmcHbaseConstant.ColumnName.ITEM_FEE);
+            long itemFee3pl = Long.parseLong(data.get(SmcHbaseConstant.ColumnName.ITEM_FEE));
             // 查询导入日志
             Map<String, String> params = new TreeMap<String, String>();
             params.put(SmcCacheConstant.Dshm.FieldName.TENANT_ID, tenantId);
@@ -291,11 +292,11 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 5， 如果不存在此流水或此流水对应的科目金额不一致，
             // 向详单差异表中插入此差异详单表（stl_bill_detail_diff_data_yyyymm）
             if (StringUtil.isBlank(feeItemIdSys) || !feeItemId3pl.equals(feeItemIdSys)
-                    || !itemFee3pl.equals(String.valueOf(itemFeeSys))) {
-                String diffFee = itemFee3pl;
+                    || itemFee3pl != itemFeeSys) {
+                long diffFee = itemFee3pl;
                 String checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.NOT_FIND_SYS;
                 if (!StringUtil.isBlank(feeItemIdSys)) {
-                    diffFee = String.valueOf(Long.parseLong(itemFee3pl) - itemFeeSys);
+                    diffFee = itemFee3pl - itemFeeSys;
                     checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.DIFF_FEE;
                 }
                 // 查询第三方详单
@@ -330,7 +331,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                             entry.getKey(), entry.getValue());
                 }
                 put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
-                        SmcHbaseConstant.ColumnName.DIFF_FEE.getBytes(), diffFee.getBytes());
+                        SmcHbaseConstant.ColumnName.DIFF_FEE.getBytes(), Bytes.toBytes(diffFee));
                 put.addColumn(SmcHbaseConstant.FamilyName.COLUMN_DEF.getBytes(),
                         SmcHbaseConstant.ColumnName.CHECK_STATE.getBytes(),
                         SmcConstant.StlBillDetailDiffData.CheckState.DIFF.getBytes());
