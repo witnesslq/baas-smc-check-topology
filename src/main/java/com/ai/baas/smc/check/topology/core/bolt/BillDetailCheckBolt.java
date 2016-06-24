@@ -291,12 +291,12 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
             // 5， 如果不存在此流水或此流水对应的科目金额不一致，
             // 向详单差异表中插入此差异详单表（stl_bill_detail_diff_data_yyyymm）
             if (StringUtil.isBlank(feeItemIdSys) || !feeItemId3pl.equals(feeItemIdSys)
-                    || (long) Long.parseLong(itemFee3pl) != (long) Long.parseLong(itemFeeSys)) {
+                    || Long.parseLong(itemFee3pl) - Double.parseDouble(itemFeeSys) != 0) {
                 String diffFee = itemFee3pl;
                 String checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.NOT_FIND_SYS;
                 if (!StringUtil.isBlank(feeItemIdSys)) {
-                    diffFee = String.valueOf(Float.parseFloat(itemFee3pl)
-                            - Long.parseLong(itemFeeSys));
+                    diffFee = String.valueOf(Long.parseLong(itemFee3pl)
+                            - Double.parseDouble(itemFeeSys));
                     checkStateDesc = SmcConstant.StlBillDetailDiffData.CheckStateDesc.DIFF_FEE;
                 }
                 // 查询第三方详单
@@ -797,7 +797,7 @@ public class BillDetailCheckBolt extends BaseBasicBolt {
                                 .getBytes())));
 
                         cell = row.createCell(i++);
-                        cell.setCellValue(String.valueOf(Long.parseLong(diffFee) / 1000));
+                        cell.setCellValue(String.valueOf(Double.parseDouble(diffFee) / 1000));
                         cell = row.createCell(i++);
                         cell.setCellValue(new String(map
                                 .get(SmcHbaseConstant.ColumnName.CHECK_STATE_DESC.getBytes())));
