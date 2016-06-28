@@ -1,9 +1,7 @@
 package com.ai.baas.smc.check.topology.DAO;
 
 import java.sql.Connection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.dbutils.handlers.BeanListHandler;
 
@@ -46,6 +44,7 @@ public class StlBillDataDAO {
                         .append("'");
             }
         }
+        sqlBuilder.append(" order by create_time desc ");
 
         return JdbcTemplate.query(sqlBuilder.toString(), conn, new BeanListHandler<>(
                 StlBillData.class));
